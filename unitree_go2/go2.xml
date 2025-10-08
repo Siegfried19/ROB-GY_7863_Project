@@ -88,6 +88,11 @@
           <geom mesh="thigh_0" material="metal" class="visual"/>
           <geom mesh="thigh_1" material="gray" class="visual"/>
           <geom size="0.1065 0.01225 0.017" pos="0 0 -0.1065" quat="0.707107 0 0.707107 0" type="box" class="collision"/>
+
+          <body name = "FL_rocket" pos= "-0.01 0.033 -0.03">
+            <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+          </body>
+          
           <body name="FL_calf" pos="0 0 -0.213">
             <inertial pos="0.00629595 -0.000622121 -0.141417" quat="0.710672 0.00154099 -0.00450087 0.703508"
               mass="0.241352" diaginertia="0.0014901 0.00146356 5.31397e-05"/>
@@ -99,6 +104,7 @@
             <geom pos="0 0 -0.213" mesh="foot" class="visual" material="black"/>
             <geom name="FL" class="foot"/>
           </body>
+
         </body>
       </body>
       <body name="FR_hip" pos="0.1934 -0.0465 0">
@@ -115,6 +121,11 @@
           <geom mesh="thigh_mirror_0" material="metal" class="visual"/>
           <geom mesh="thigh_mirror_1" material="gray" class="visual"/>
           <geom size="0.1065 0.01225 0.017" pos="0 0 -0.1065" quat="0.707107 0 0.707107 0" type="box" class="collision"/>
+
+          <body name = "FR_rocket" pos= "-0.01 -0.033 -0.03">
+            <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+          </body>
+
           <body name="FR_calf" pos="0 0 -0.213">
             <inertial pos="0.00629595 0.000622121 -0.141417" quat="0.703508 -0.00450087 0.00154099 0.710672"
               mass="0.241352" diaginertia="0.0014901 0.00146356 5.31397e-05"/>
@@ -142,6 +153,11 @@
           <geom mesh="thigh_0" material="metal" class="visual"/>
           <geom mesh="thigh_1" material="gray" class="visual"/>
           <geom size="0.1065 0.01225 0.017" pos="0 0 -0.1065" quat="0.707107 0 0.707107 0" type="box" class="collision"/>
+
+          <body name = "RL_rocket" pos= "-0.01 0.033 -0.03">
+            <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+          </body>
+
           <body name="RL_calf" pos="0 0 -0.213">
             <inertial pos="0.00629595 -0.000622121 -0.141417" quat="0.710672 0.00154099 -0.00450087 0.703508"
               mass="0.241352" diaginertia="0.0014901 0.00146356 5.31397e-05"/>
@@ -169,6 +185,11 @@
           <geom mesh="thigh_mirror_0" material="metal" class="visual"/>
           <geom mesh="thigh_mirror_1" material="gray" class="visual"/>
           <geom size="0.1065 0.01225 0.017" pos="0 0 -0.1065" quat="0.707107 0 0.707107 0" type="box" class="collision"/>
+
+          <body name = "RR_rocket" pos= "-0.01 -0.033 -0.03">
+            <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+          </body>
+
           <body name="RR_calf" pos="0 0 -0.213">
             <inertial pos="0.00629595 0.000622121 -0.141417" quat="0.703508 -0.00450087 0.00154099 0.710672"
               mass="0.241352" diaginertia="0.0014901 0.00146356 5.31397e-05"/>
