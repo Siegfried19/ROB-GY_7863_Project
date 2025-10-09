@@ -7,7 +7,7 @@ import numpy as np
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "unitree_go2", "scene_moon.xml")
 LOCK_JOINTS = True  # 改成 False 就不会锁定任何关节
 JOINTS_TO_LOCK = ["root"]  # 想锁定的关节名称列表，"root" 表示整个机身
-THRUST_FORCE = 2222.0  # 四个火箭同时喷射的推力（牛顿）
+THRUST_FORCE = 2.0  # 四个火箭同时喷射的推力（牛顿）
 SIM_DURATION = 50.0  # 模拟时长（秒）
 # ===================================
 THRUSTER_NAMES: Tuple[str, ...] = (
