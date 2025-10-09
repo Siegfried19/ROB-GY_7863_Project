@@ -119,11 +119,25 @@ def simple_walk_demo(model_path):
     
     print("Starting walk demo...")
     print("Simulation will stop after 10 seconds\n")
-    
+    dog_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "go2")
     with mujoco.viewer.launch_passive(model, data) as viewer:
         last_print = 0
-        
+
+
+
         while viewer.is_running() and data.time < max_simulation_time:
+
+
+                    
+            # get world coordinate
+            dog_pos = data.xpos[dog_id]
+
+            # camera setting
+            viewer.cam.lookat[:] = dog_pos             
+            viewer.cam.distance = 3.0                
+            viewer.cam.elevation = -10         
+            viewer.cam.azimuth = 180                   
+
             t = data.time
             
             # ==== PREPARE DATA ROW ====
@@ -218,7 +232,7 @@ def simple_walk_demo(model_path):
 
 if __name__ == "__main__":
     # Use the path from your code
-    base_path = "C:\\Users\\Bowen\\Desktop\\code\\ROB-GY_7863_Project"
-    model_path = f"{base_path}/unitree_go2/scene.xml"
+
+    model_path = f"unitree_go2/scene_moon.xml"
     
     simple_walk_demo(model_path)

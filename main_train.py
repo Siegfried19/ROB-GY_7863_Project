@@ -2,7 +2,6 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 
-print(mujoco.__version__)
 # 1. 加载 XML 模型（例如 humanoid.xml）
 model = mujoco.MjModel.from_xml_path("unitree_go2/scene_moon.xml")
 
