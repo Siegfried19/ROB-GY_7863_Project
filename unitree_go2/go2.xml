@@ -91,6 +91,7 @@
 
           <body name = "FL_rocket" pos= "-0.01 0.033 -0.03">
             <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+            <site name="FL_rocket_site" pos="0 0 -0.03"/>
           </body>
           
           <body name="FL_calf" pos="0 0 -0.213">
@@ -124,6 +125,7 @@
 
           <body name = "FR_rocket" pos= "-0.01 -0.033 -0.03">
             <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+            <site name="FR_rocket_site" pos="0 0 -0.03"/>
           </body>
 
           <body name="FR_calf" pos="0 0 -0.213">
@@ -156,6 +158,7 @@
 
           <body name = "RL_rocket" pos= "-0.01 0.033 -0.03">
             <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+            <site name="RL_rocket_site" pos="0 0 -0.03"/>
           </body>
 
           <body name="RL_calf" pos="0 0 -0.213">
@@ -188,6 +191,7 @@
 
           <body name = "RR_rocket" pos= "-0.01 -0.033 -0.03">
             <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+            <site name="RR_rocket_site" pos="0 0 -0.03"/>
           </body>
 
           <body name="RR_calf" pos="0 0 -0.213">
@@ -219,10 +223,14 @@
     <motor class="abduction" name="RR_hip" joint="RR_hip_joint"/>
     <motor class="hip" name="RR_thigh" joint="RR_thigh_joint"/>
     <motor class="knee" name="RR_calf" joint="RR_calf_joint"/>
+    <general name="FL_rocket_thruster" site="FL_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
+    <general name="FR_rocket_thruster" site="FR_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
+    <general name="RL_rocket_thruster" site="RL_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
+    <general name="RR_rocket_thruster" site="RR_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
   </actuator>
 
   <keyframe>
     <key name="home" qpos="0 0 0.27 1 0 0 0 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"
-      ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"/>
+      ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0 0 0"/>
   </keyframe>
 </mujoco>
