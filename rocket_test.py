@@ -10,7 +10,7 @@ LOCK_JOINTS = True  # 改成 False 就不会锁定任何关节
 JOINTS_TO_LOCK = ["FL_thigh_joint", "FR_thigh_joint", "RL_thigh_joint", "RR_thigh_joint",
                   "FL_hip_joint", "FR_hip_joint", "RL_hip_joint", "RR_hip_joint"]  # 想锁定的关节名称列表，"root" 表示整个机身
 THRUST_FORCE = 50.0  # 四个火箭同时喷射的推力（牛顿）
-SIM_DURATION = 50.0  # 模拟时长（秒）
+SIM_DURATION = 5000.0  # 模拟时长（秒）
 # ===================================
 THRUSTER_NAMES: Tuple[str, ...] = (
     "FL_rocket_thruster",
@@ -78,8 +78,11 @@ def main() -> None:
     print(f"四个火箭喷射力：{THRUST_FORCE:.1f} N")
     print(f"模拟时长：{SIM_DURATION:.1f} s（关闭窗口即可提前结束）")
     dog_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "go2")
-    
-    
+    RR_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "RR_flame")
+    RL_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "RL_flame")
+    FR_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "FR_flame")
+    FL_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "FL_flame")
+
     with mujoco.viewer.launch_passive(model, data) as viewer:
         keyboard_controller.start_listener()
         while viewer.is_running() and data.time < SIM_DURATION:
@@ -93,16 +96,25 @@ def main() -> None:
             # viewer.cam.azimuth = 180  
             # viewer.cam.distance = 10
             data.ctrl[:] = 0.0
+            brightness = min(1.0, THRUST_FORCE / 50.0)
             if keyboard_controller.is_active():
                 for act_id in thruster_ids:
                     if act_id == 14 or act_id == 15:
                         print(f"火箭{act_id:.2f}喷射")
                         data.ctrl[act_id] = THRUST_FORCE
+                        model.geom_rgba[RR_flame_id, 3] = brightness  # 调整透明度
+                        model.geom_rgba[RL_flame_id, 3] = brightness
                     if act_id == 12 or act_id == 13:
                         print(f"火箭{act_id:.2f}喷射")
                         data.ctrl[act_id] = THRUST_FORCE*1.32
+                        model.geom_rgba[FR_flame_id, 3] = brightness  # 调整透明度
+                        model.geom_rgba[FL_flame_id, 3] = brightness
             else:
                 data.ctrl[:] = 0.0
+                model.geom_rgba[FL_flame_id, 3] = 0
+                model.geom_rgba[FR_flame_id, 3] = 0
+                model.geom_rgba[RL_flame_id, 3] = 0
+                model.geom_rgba[RR_flame_id, 3] = 0
             mujoco.mj_step(model, data)
             for qpos_sl, dof_sl, ref in frozen:
                 data.qpos[qpos_sl] = ref
