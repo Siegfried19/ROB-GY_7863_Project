@@ -4,7 +4,15 @@ import numpy as np
 import os
 import csv
 from datetime import datetime
+import keyboard_controller
+from typing import List, Sequence, Tuple
 
+THRUSTER_NAMES: Tuple[str, ...] = (
+    "FL_rocket_thruster",
+    "FR_rocket_thruster",
+    "RL_rocket_thruster",
+    "RR_rocket_thruster",
+)
 
 def simple_walk_demo(model_path):
     """Simple hardcoded walking demonstration for Unitree Go2"""
@@ -33,6 +41,15 @@ def simple_walk_demo(model_path):
             leg_joints.setdefault('RL', []).append(i)
         elif jname.startswith('RR_'):
             leg_joints.setdefault('RR', []).append(i)
+            
+    thruster_ids: List[int] = []
+    for name in THRUSTER_NAMES:
+        try:
+            thruster_ids.append(
+                mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, name)
+            )
+        except mujoco.Error:
+            raise ValueError(f"模型里找不到火箭执行器：{name}")
     
     # Sort joints by position
     for leg in leg_joints:
@@ -84,8 +101,8 @@ def simple_walk_demo(model_path):
     # # ============================
     
     # Walking parameters
-    freq = 2.5  # Walking frequency (Hz)
-    max_simulation_time = 10.0  # Stop after 10 seconds
+    freq = 1.5  # Walking frequency (Hz)
+    max_simulation_time = 100.0  # Stop after 10 seconds
     
     # Trot gait - BACK TO ORIGINAL
     def get_phase_offset(leg_name):
@@ -107,7 +124,7 @@ def simple_walk_demo(model_path):
         # Thigh: NEGATE to walk forward instead of backward
         # Original was: 0.8 + 0.4 * swing (walked backward)
         # So reverse it to: use negative swing values
-        thigh = 0.8 + 0.4 * swing  # Flip the direction
+        thigh = 0.8 - 0.4 * swing  # Flip the direction
         
         # Calf: Keep original
         if swing > 0:  # Swing phase
@@ -122,24 +139,21 @@ def simple_walk_demo(model_path):
     dog_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "go2")
     with mujoco.viewer.launch_passive(model, data) as viewer:
         last_print = 0
-
-
-
+        # viewer.cam.lookat[:] = data.body(dog_id).xpos
+        viewer.cam.distance = 10
+        keyboard_controller.start_listener()
         while viewer.is_running() and data.time < max_simulation_time:
 
+            # # get world coordinate
+            # dog_pos = data.xpos[dog_id]
 
-                    
-            # get world coordinate
-            dog_pos = data.xpos[dog_id]
-
-            # camera setting
-            viewer.cam.lookat[:] = dog_pos             
-            viewer.cam.distance = 3.0                
-            viewer.cam.elevation = -10         
-            viewer.cam.azimuth = 180                   
+            # # camera setting
+            # viewer.cam.lookat[:] = dog_pos             
+            # viewer.cam.distance = 3.0                
+            # viewer.cam.elevation = -10         
+            # viewer.cam.azimuth = 180                   
 
             t = data.time
-            
             # ==== PREPARE DATA ROW ====
             data_row = [t]
             
@@ -203,6 +217,17 @@ def simple_walk_demo(model_path):
             # logged_data.append(data_row)
             
             # Step simulation
+            if keyboard_controller.is_active():
+                for act_id in thruster_ids:
+                    if act_id == 14 or act_id == 15:
+                        print(f"火箭{act_id:.2f}喷射")
+                        data.ctrl[act_id] = 23
+                    if act_id == 12 or act_id == 13:
+                        print(f"火箭{act_id:.2f}喷射")
+                        data.ctrl[act_id] = 23*1.32
+            else:
+                data.ctrl[12:] = 0.0
+            mujoco.mj_step(model, data)
             mujoco.mj_step(model, data)
             viewer.sync()
             

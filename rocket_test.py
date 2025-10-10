@@ -3,11 +3,13 @@ from typing import List, Sequence, Tuple
 import mujoco
 import mujoco.viewer
 import numpy as np
+import keyboard_controller
 # ====== 修改这里来控制测试行为 ======
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "unitree_go2", "scene_moon.xml")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "unitree_go2", "scene.xml")
 LOCK_JOINTS = True  # 改成 False 就不会锁定任何关节
-JOINTS_TO_LOCK = ["root"]  # 想锁定的关节名称列表，"root" 表示整个机身
-THRUST_FORCE = 10.0  # 四个火箭同时喷射的推力（牛顿）
+JOINTS_TO_LOCK = ["FL_thigh_joint", "FR_thigh_joint", "RL_thigh_joint", "RR_thigh_joint",
+                  "FL_hip_joint", "FR_hip_joint", "RL_hip_joint", "RR_hip_joint"]  # 想锁定的关节名称列表，"root" 表示整个机身
+THRUST_FORCE = 50.0  # 四个火箭同时喷射的推力（牛顿）
 SIM_DURATION = 50.0  # 模拟时长（秒）
 # ===================================
 THRUSTER_NAMES: Tuple[str, ...] = (
@@ -60,11 +62,11 @@ def main() -> None:
     data = mujoco.MjData(model)
     mujoco.mj_resetData(model, data)
     mujoco.mj_forward(model, data)
-    # frozen = _prepare_freeze(model, data, JOINTS_TO_LOCK if LOCK_JOINTS else [])
-    # if frozen:
-    #     print("锁定的关节：", ", ".join(JOINTS_TO_LOCK))
-    # else:
-    #     print("没有锁定任何关节。")
+    frozen = _prepare_freeze(model, data, JOINTS_TO_LOCK if LOCK_JOINTS else [])
+    if frozen:
+        print("锁定的关节：", ", ".join(JOINTS_TO_LOCK))
+    else:
+        print("没有锁定任何关节。")
     thruster_ids: List[int] = []
     for name in THRUSTER_NAMES:
         try:
@@ -76,26 +78,39 @@ def main() -> None:
     print(f"四个火箭喷射力：{THRUST_FORCE:.1f} N")
     print(f"模拟时长：{SIM_DURATION:.1f} s（关闭窗口即可提前结束）")
     dog_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "go2")
+    
+    
     with mujoco.viewer.launch_passive(model, data) as viewer:
+        keyboard_controller.start_listener()
         while viewer.is_running() and data.time < SIM_DURATION:
             # get world coordinate
             dog_pos = data.xpos[dog_id]
 
-            # camera setting
-            viewer.cam.lookat[:] = dog_pos             
-            viewer.cam.distance = 3.0                
-            viewer.cam.elevation = -10         
-            viewer.cam.azimuth = 180  
+            # # camera setting
+            # viewer.cam.lookat[:] = dog_pos             
+            # viewer.cam.distance = 3.0                
+            # viewer.cam.elevation = -10         
+            # viewer.cam.azimuth = 180  
+            viewer.cam.distance = 10
             data.ctrl[:] = 0.0
-            for act_id in thruster_ids:
-                data.ctrl[act_id] = THRUST_FORCE
+            if keyboard_controller.is_active():
+                for act_id in thruster_ids:
+                    if act_id == 14 or act_id == 15:
+                        print(f"火箭{act_id:.2f}喷射")
+                        data.ctrl[act_id] = THRUST_FORCE
+                    if act_id == 12 or act_id == 13:
+                        print(f"火箭{act_id:.2f}喷射")
+                        data.ctrl[act_id] = THRUST_FORCE*1.32
+            else:
+                data.ctrl[:] = 0.0
             mujoco.mj_step(model, data)
-            # for qpos_sl, dof_sl, ref in frozen:
-            #     data.qpos[qpos_sl] = ref
-            #     data.qvel[dof_sl] = 0.0
-            # if frozen:
-            mujoco.mj_forward(model, data)
+            for qpos_sl, dof_sl, ref in frozen:
+                data.qpos[qpos_sl] = ref
+                data.qvel[dof_sl] = 0.0
+            if frozen:
+                mujoco.mj_forward(model, data)
             viewer.sync()
+    keyboard_controller.stop_listener()
     print(f"模拟结束，最终时间：{data.time:.2f} s")
     print(f"最终底座位置：{data.qpos[:3]}")
 if __name__ == "__main__":
