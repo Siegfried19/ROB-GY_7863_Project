@@ -91,7 +91,7 @@ def main() -> None:
             # viewer.cam.distance = 3.0                
             # viewer.cam.elevation = -10         
             # viewer.cam.azimuth = 180  
-            viewer.cam.distance = 10
+            # viewer.cam.distance = 10
             data.ctrl[:] = 0.0
             if keyboard_controller.is_active():
                 for act_id in thruster_ids:

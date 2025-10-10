@@ -58,10 +58,13 @@
     <mesh file="calf_mirror_0.obj"/>
     <mesh file="calf_mirror_1.obj"/>
     <mesh file="foot.obj"/>
+    <mesh file="rocket_L.STL" scale="0.002 0.002 0.002"/>
+    <mesh file="rocket_R.STL" scale="0.002 0.002 0.002"/>
   </asset>
 
   <worldbody>
-    <body name="base" pos="-4 1 3" childclass="go2">
+    <!-- <body name="base" pos="-4 1 3" childclass="go2"> -->
+    <body name="base" pos="0 0 3" childclass="go2">
       <inertial pos="0.021112 0 -0.005366" quat="-0.000543471 0.713435 -0.00173769 0.700719" mass="6.921"
         diaginertia="0.107027 0.0980771 0.0244531"/>
       <freejoint/>
@@ -90,7 +93,7 @@
           <geom size="0.1065 0.01225 0.017" pos="0 0 -0.1065" quat="0.707107 0 0.707107 0" type="box" class="collision"/>
 
           <body name = "FL_rocket" pos= "-0.01 0.033 -0.03">
-            <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+            <geom type="mesh" mesh="rocket_L" pos="0.02 0.02 -0.07" euler="1.5708 -1.5708 0" class="visual" material="metal"/>
             <site name="FL_rocket_site" pos="0 0 -0.03"/>
           </body>
           
@@ -124,7 +127,7 @@
           <geom size="0.1065 0.01225 0.017" pos="0 0 -0.1065" quat="0.707107 0 0.707107 0" type="box" class="collision"/>
 
           <body name = "FR_rocket" pos= "-0.01 -0.033 -0.03">
-            <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+            <geom type="mesh" mesh="rocket_R" pos="0.02 0.02 -0.07" euler="1.5708 -1.5708 0" class="visual" material="metal"/>
             <site name="FR_rocket_site" pos="0 0 -0.03"/>
           </body>
 
@@ -157,7 +160,7 @@
           <geom size="0.1065 0.01225 0.017" pos="0 0 -0.1065" quat="0.707107 0 0.707107 0" type="box" class="collision"/>
 
           <body name = "RL_rocket" pos= "-0.01 0.033 -0.03">
-            <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+            <geom type="mesh" mesh="rocket_L" pos="0.02 0.02 -0.07" euler="1.5708 -1.5708 0" class="visual" material="metal"/>
             <site name="RL_rocket_site" pos="0 0 -0.03"/>
           </body>
 
@@ -190,7 +193,7 @@
           <geom size="0.1065 0.01225 0.017" pos="0 0 -0.1065" quat="0.707107 0 0.707107 0" type="box" class="collision"/>
 
           <body name = "RR_rocket" pos= "-0.01 -0.033 -0.03">
-            <geom size="0.02 0.06" pos="0 0 0" type="cylinder" class="visual" material="black"/>
+            <geom type="mesh" mesh="rocket_R" pos="0.02 0.02 -0.07" euler="1.5708 -1.5708 0" class="visual" material="metal"/>
             <site name="RR_rocket_site" pos="0 0 -0.03"/>
           </body>
 
