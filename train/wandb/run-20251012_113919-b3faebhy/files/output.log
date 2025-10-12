@@ -1,0 +1,29 @@
+num_state36, num_action16
+/home/jz7785/miniconda3/envs/issaclab/lib/python3.11/site-packages/gym/core.py:172: DeprecationWarning: [33mWARN: Function `env.seed(seed)` is marked as deprecated and will be removed in the future. Please use `env.reset(seed=seed) instead.[0m
+  deprecation(
+ save model output/checkpoints/actor_max.pth and output/checkpoints/critic_max.pth
+iteration: 0, episode number1, episode score is 1573.94
+ save model output/checkpoints/actor_0.pth and output/checkpoints/critic_0.pth
+ save model output/checkpoints/actor_max.pth and output/checkpoints/critic_max.pth
+iteration: 1, episode number2, episode score is 1605.31
+iteration: 2, episode number3, episode score is 1526.03
+iteration: 3, episode number3, episode score is 1251.87
+iteration: 4, episode number2, episode score is 1514.41
+ save model output/checkpoints/actor_max.pth and output/checkpoints/critic_max.pth
+iteration: 5, episode number2, episode score is 1627.66
+ save model output/checkpoints/actor_max.pth and output/checkpoints/critic_max.pth
+iteration: 6, episode number2, episode score is 1753.02
+Traceback (most recent call last):
+  File "/home/jz7785/ZST/Classes/ROB-GY_7863_Project/train/main_train.py", line 99, in <module>
+    s_ , r ,done,info = env.step(a)
+                        ^^^^^^^^^^^
+  File "/home/jz7785/miniconda3/envs/issaclab/lib/python3.11/site-packages/gym/wrappers/order_enforcing.py", line 13, in step
+    observation, reward, done, info = self.env.step(action)
+                                      ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jz7785/ZST/Classes/ROB-GY_7863_Project/train/go2_env.py", line 99, in step
+    ref_ctrl = get_ref_torque(self.model,self.data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jz7785/ZST/Classes/ROB-GY_7863_Project/train/get_ref_action.py", line 56, in get_ref_torque
+    if model.actuator_trnid[act_id, 0] == joint_id:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

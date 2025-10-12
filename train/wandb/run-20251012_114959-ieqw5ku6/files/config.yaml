@@ -1,0 +1,51 @@
+_wandb:
+    value:
+        cli_version: 0.21.3
+        e:
+            vca54h3jymfarzxlomuhcfxt0ix844c0:
+                codePath: train/main_train.py
+                codePathLocal: main_train.py
+                cpu_count: 20
+                cpu_count_logical: 20
+                cudaVersion: "12.9"
+                disk:
+                    /:
+                        total: "495149572096"
+                        used: "228251070464"
+                email: zst806038347@gmail.com
+                executable: /home/jz7785/miniconda3/envs/issaclab/bin/python
+                git:
+                    commit: 19551d4db992cbaaf26a852b0e2424a7b3a687dc
+                    remote: git@github.com:Siegfried19/ROB-GY_7863_Project.git
+                gpu: NVIDIA GeForce RTX 5080
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Blackwell
+                      cudaCores: 10752
+                      memoryTotal: "17094934528"
+                      name: NVIDIA GeForce RTX 5080
+                      uuid: GPU-644ee918-1931-600d-7f3b-08ae905634c0
+                host: ENG-HS5894-UBUNTU
+                memory:
+                    total: "16450416640"
+                os: Linux-6.14.0-24-generic-x86_64-with-glibc2.39
+                program: /home/jz7785/ZST/Classes/ROB-GY_7863_Project/train/main_train.py
+                python: CPython 3.11.13
+                root: /home/jz7785/ZST/Classes/ROB-GY_7863_Project/train
+                startedAt: "2025-10-12T15:49:59.159075Z"
+                writerId: vca54h3jymfarzxlomuhcfxt0ix844c0
+        m: []
+        python_version: 3.11.13
+        t:
+            "1":
+                - 1
+                - 105
+            "2":
+                - 1
+                - 105
+            "3":
+                - 13
+            "4": 3.11.13
+            "5": 0.21.3
+            "12": 0.21.3
+            "13": linux-x86_64

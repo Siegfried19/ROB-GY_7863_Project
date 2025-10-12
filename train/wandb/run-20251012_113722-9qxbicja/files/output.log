@@ -1,0 +1,37 @@
+/home/jz7785/miniconda3/envs/issaclab/lib/python3.11/site-packages/torch/cuda/__init__.py:174: UserWarning: CUDA initialization: CUDA driver initialization failed, you might not have a CUDA gpu. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:109.)
+  return torch._C._cuda_getDeviceCount() > 0
+num_state36, num_action16
+/home/jz7785/miniconda3/envs/issaclab/lib/python3.11/site-packages/gym/core.py:172: DeprecationWarning: [33mWARN: Function `env.seed(seed)` is marked as deprecated and will be removed in the future. Please use `env.reset(seed=seed) instead.[0m
+  deprecation(
+ save model output/checkpoints/actor_max.pth and output/checkpoints/critic_max.pth
+iteration: 0, episode number2, episode score is 1631.55
+ save model output/checkpoints/actor_0.pth and output/checkpoints/critic_0.pth
+iteration: 1, episode number2, episode score is 1164.32
+iteration: 2, episode number3, episode score is 992.47
+iteration: 3, episode number4, episode score is 812.66
+ save model output/checkpoints/actor_max.pth and output/checkpoints/critic_max.pth
+iteration: 4, episode number2, episode score is 1712.95
+iteration: 5, episode number2, episode score is 1517.26
+ save model output/checkpoints/actor_max.pth and output/checkpoints/critic_max.pth
+iteration: 6, episode number2, episode score is 1739.11
+iteration: 7, episode number3, episode score is 915.67
+iteration: 8, episode number1, episode score is 1638.57
+ save model output/checkpoints/actor_max.pth and output/checkpoints/critic_max.pth
+iteration: 9, episode number2, episode score is 2041.92
+Traceback (most recent call last):
+  File "/home/jz7785/ZST/Classes/ROB-GY_7863_Project/train/main_train.py", line 124, in <module>
+    loss_actor_exo, loss_critic_exo = ppo.train(memory)
+                                      ^^^^^^^^^^^^^^^^^
+  File "/home/jz7785/ZST/Classes/ROB-GY_7863_Project/train/PPO.py", line 46, in train
+    mu,std = self.actor_net(b_states)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jz7785/miniconda3/envs/issaclab/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jz7785/miniconda3/envs/issaclab/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jz7785/ZST/Classes/ROB-GY_7863_Project/train/model.py", line 25, in forward
+    x = torch.tanh(self.fc2(x))
+        ^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

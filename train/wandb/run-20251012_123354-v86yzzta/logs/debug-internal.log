@@ -1,0 +1,11 @@
+{"time":"2025-10-12T12:33:54.549132913-04:00","level":"INFO","msg":"stream: starting","core version":"0.21.3"}
+{"time":"2025-10-12T12:33:54.722251503-04:00","level":"INFO","msg":"stream: created new stream","id":"v86yzzta"}
+{"time":"2025-10-12T12:33:54.722275865-04:00","level":"INFO","msg":"stream: started","id":"v86yzzta"}
+{"time":"2025-10-12T12:33:54.722332145-04:00","level":"INFO","msg":"handler: started","stream_id":"v86yzzta"}
+{"time":"2025-10-12T12:33:54.722333634-04:00","level":"INFO","msg":"writer: started","stream_id":"v86yzzta"}
+{"time":"2025-10-12T12:33:54.722339825-04:00","level":"INFO","msg":"sender: started","stream_id":"v86yzzta"}
+{"time":"2025-10-12T13:07:53.156305493-04:00","level":"INFO","msg":"stream: closing","id":"v86yzzta"}
+{"time":"2025-10-12T13:07:53.494588594-04:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-10-12T13:07:53.603201062-04:00","level":"INFO","msg":"handler: closed","stream_id":"v86yzzta"}
+{"time":"2025-10-12T13:07:53.603258834-04:00","level":"INFO","msg":"sender: closed","stream_id":"v86yzzta"}
+{"time":"2025-10-12T13:07:53.603273731-04:00","level":"INFO","msg":"stream: closed","id":"v86yzzta"}

@@ -1,0 +1,39 @@
+<mujoco model="go2_moon_scene">
+    <!-- 包含狗模型 -->
+    <include file="go2_jet.xml"/>
+
+    <statistic center="0 0 0.1" extent="0.8"/>
+
+    <visual>
+        <headlight diffuse="0.8 0.8 0.8" ambient="0.4 0.4 0.4" specular="0.2 0.2 0.2"/>
+        <rgba haze="0.15 0.25 0.35 1"/>
+        <global azimuth="-130" elevation="-20"/>
+    </visual>
+
+    <option gravity="0 0 -1.62" timestep="0.002"/> <!-- 月球重力 -->
+
+    <asset>
+        <!-- 天空与纹理 -->
+        <texture type="skybox" builtin="gradient" rgb1="0.2 0.3 0.4" rgb2="0 0 0" width="512" height="3072"/>
+
+        <!-- 月球表面灰度纹理 -->
+        <texture name="moon_tex" type="2d" builtin="flat"
+                 width="256" height="256"
+                 rgb1="0.6 0.6 0.6" rgb2="0.4 0.4 0.4"/>
+        <material name="moon_mat" texture="moon_tex" reflectance="0.2"/>
+
+        <!-- 加载坑洼地形（你生成的 PNG） -->
+        <hfield name="moon_hf" file="moon_height.png" size="10 10 1.0 0.01"/>
+    </asset>
+
+    <worldbody>
+        <!-- 光源 -->
+        <light pos="0 0 3" dir="0 0 -1" diffuse="1 1 1" specular="0.3 0.3 0.3"/>
+
+        <!-- 替换平面地面为坑洼地形 -->
+        <geom name="moon_ground" type="hfield" hfield="moon_hf"
+              material="moon_mat" rgba="0.7 0.7 0.7 1"/>
+
+
+    </worldbody>
+</mujoco>

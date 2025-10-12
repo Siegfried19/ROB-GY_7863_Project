@@ -1,0 +1,40 @@
+{
+  "os": "Linux-6.14.0-24-generic-x86_64-with-glibc2.39",
+  "python": "CPython 3.11.13",
+  "startedAt": "2025-10-12T16:33:54.341874Z",
+  "program": "/home/jz7785/ZST/Classes/ROB-GY_7863_Project/train/main_train.py",
+  "codePath": "train/main_train.py",
+  "codePathLocal": "main_train.py",
+  "git": {
+    "remote": "git@github.com:Siegfried19/ROB-GY_7863_Project.git",
+    "commit": "19551d4db992cbaaf26a852b0e2424a7b3a687dc"
+  },
+  "email": "zst806038347@gmail.com",
+  "root": "/home/jz7785/ZST/Classes/ROB-GY_7863_Project/train",
+  "host": "ENG-HS5894-UBUNTU",
+  "executable": "/home/jz7785/miniconda3/envs/issaclab/bin/python",
+  "cpu_count": 20,
+  "cpu_count_logical": 20,
+  "gpu": "NVIDIA GeForce RTX 5080",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "495149572096",
+      "used": "228254081024"
+    }
+  },
+  "memory": {
+    "total": "16450416640"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce RTX 5080",
+      "memoryTotal": "17094934528",
+      "cudaCores": 10752,
+      "architecture": "Blackwell",
+      "uuid": "GPU-644ee918-1931-600d-7f3b-08ae905634c0"
+    }
+  ],
+  "cudaVersion": "12.9",
+  "writerId": "ichuuswov51s0jdoyxd3yldtr8vliwhu"
+}

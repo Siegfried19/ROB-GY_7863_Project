@@ -1,0 +1,1 @@
+{"_timestamp":1.7602888715494788e+09,"num of episode":11,"average return per iter":614.9444778573774,"Loss critic exo":759.5675659179688,"Loss actor exo":0.17502808570861816,"_runtime":2038,"_wandb":{"runtime":2038},"max steps per iter":1076,"_step":523}
