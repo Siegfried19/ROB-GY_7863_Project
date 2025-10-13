@@ -279,6 +279,10 @@ def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), ome
     # print(r_list)
     # print(eF, eT)
     # 反解关节角度
+    RR_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "RR_flame")
+    RL_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "RL_flame")
+    FR_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "FR_flame")
+    FL_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "FL_flame")
     for i, leg in enumerate(LEG):
         f_prev[leg] = f_star[i].copy()
         R_world_hip  = get_R_from_xmat(data.xmat[hip_bid[leg]])
@@ -300,8 +304,11 @@ def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), ome
         thigh_act_id = actuator_for_joint(model, thigh_jid[leg])
         data.ctrl[thigh_act_id] = pd_for_joint(model, data, thigh_jid[leg], thigh)
         data.ctrl[thr_act_id[leg]] = u_cmd[i]
-    
-    
+
+        flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, leg + "_flame")
+        brightness = min(1.0, u_cmd[i] / 50.0)
+        model.geom_rgba[flame_id, 3] = brightness
+
 def save_virtual_control_error_plot(path="virtual_control_error.png"):
     if not error_log:
         print("No virtual control error data recorded; skipping plot.")
