@@ -247,15 +247,15 @@ def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), ome
     for leg in LEG:
         sid = site_id[leg]
         # site 世界姿态/位置
-        z_site_world = data.xmat[sid][6:9]            # site 的 +z 轴（世界）
-        pos_site_world = data.xpos[sid]
+        z_site_world = data.site_xmat[sid][6:9]            # site 的 +z 轴（世界）
+        pos_site_world = data.site_xpos[sid]
         # 转到机体系
         bB = R_world_body.T @ z_site_world   # 喷口轴（机体系）
         rB = R_world_body.T @ (pos_site_world - data.subtree_com[base_bid])    # 机体质心到 site 的向量
         B_list.append(bB)
         r_list.append(rB)
         a_list.append(z_body_body / (np.linalg.norm(z_body_body) + 1e-9)) # 机体的 +z 轴（世界）
-        if leg == "RL":
+        if leg == "FL":
             print(pos_site_world)
         
     # # test

@@ -71,9 +71,9 @@ def control(model, data, vd_body, Rd):
     B_list, r_list, a_list = [], [], []
     for leg in LEG:
         sid = site_id[leg]
-        # site 世界姿态/位置
-        z_world = data.xmat[sid][6:9]            # site 的 +z 轴（世界）
-        x_world = data.xpos[sid]
+        # site 世界姿态/位置（注意使用 site_xmat/site_xpos 而不是 xmat/xpos）
+        z_world = data.site_xmat[sid][6:9]       # site 的 +z 轴（世界）
+        x_world = data.site_xpos[sid]
         # 转到机体系
         bB = R_world_body.T @ z_world   # 喷口轴（机体系）
         rB = R_world_body.T @ (x_world - data.subtree_com[base_bid])    # 机体质心到 site 的向量
