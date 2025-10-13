@@ -228,7 +228,41 @@ def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), ome
     print(tau_d)
     error_log.append((float(data.time), ev.copy()))
 
+    # 优化计算喷口推力
+    u_max_list = [u_max for _ in LEG]
+    f_star, eF, eT = solve_thrusters_SOCP(Fd_body, tau_d, r_list, a_list, u_max_list,
+                                        f_prev=[f_prev[leg] for leg in LEG],
+                                        theta_max=theta_max, rho=rho)
+    u_cmd = np.linalg.norm(f_star, axis=1)
+    b_body = (f_star.T / (u_cmd + 1e-9)).T  # 4x3 单位方向
+    # 反解关节角度
+    for i, leg in enumerate(LEG):
+        R_world_hip  = get_R_from_xmat(data.xmat[hip_bid[leg]])
+        R_body_hip   = R_world_body.T @ R_world_hip
+        d = R_body_hip.T @ b_body[i]
+        qHAA = np.arctan2(d[1], d[0])
+        qHFE = np.arctan2(np.hypot(d[0], d[1]), -d[2])
 
+    # # 关节 PD 控制以及火箭推力控制
+    # kp, kd = 40.0, 2.0  # 起步增益，按需要调
+    # for leg in LEG:
+    #     j1, j2 = hip_jid[leg], thigh_jid[leg]
+    #     q1adr = model.jnt_qposadr[j1]; q2adr = model.jnt_qposadr[j2]
+    #     v1adr = model.jnt_dofadr[j1]; v2adr = model.jnt_dofadr[j2]
+    #     # 期望角 - 当前角
+    #     e1 = q1_cmd[leg] - data.qpos[q1adr]
+    #     e2 = q2_cmd[leg] - data.qpos[q2adr]
+    #     tau1 = kp*e1 - kd*data.qvel[v1adr]
+    #     tau2 = kp*e2 - kd*data.qvel[v2adr]
+    #     # 写到电机：你的 joint 执行器是 torque motor（class "abduction"/"hip"）
+    #     act1 = mj.mj_name2id(model, mj.mjtObj.mjOBJ_ACTUATOR, f"{leg}_hip")
+    #     act2 = mj.mj_name2id(model, mj.mjtObj.mjOBJ_ACTUATOR, f"{leg}_thigh")
+    #     data.ctrl[act1] = tau1
+    #     data.ctrl[act2] = tau2
+    #     # 喷口推力
+    #     data.ctrl[thr_act_id[leg]] = u_cmd[leg]
+    
+    
 def save_virtual_control_error_plot(path="virtual_control_error.png"):
     if not error_log:
         print("No virtual control error data recorded; skipping plot.")
@@ -281,18 +315,18 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene.xml")):
     with mujoco.viewer.launch_passive(model, data) as viewer:
         last_log = 0.0
         while viewer.is_running():
-            # Leg PD control
-            for leg in LEG:
-                hip_j = hip_jid[leg]
-                thigh_j = thigh_jid[leg]
-                calf_j = calf_jid[leg]
+            # # Leg PD control
+            # for leg in LEG:
+            #     hip_j = hip_jid[leg]
+            #     thigh_j = thigh_jid[leg]
+            #     calf_j = calf_jid[leg]
                 
-                a_id = actuator_for_joint(model, hip_j)
-                data.ctrl[a_id] = pd_for_joint(model, data, hip_j, target_angles["hip"])
-                a_id = actuator_for_joint(model, thigh_j)
-                data.ctrl[a_id] = pd_for_joint(model, data, thigh_j, target_angles["thigh"])
-                a_id = actuator_for_joint(model, calf_j)
-                data.ctrl[a_id] = pd_for_joint(model, data, calf_j, target_angles["calf"])
+            #     a_id = actuator_for_joint(model, hip_j)
+            #     data.ctrl[a_id] = pd_for_joint(model, data, hip_j, target_angles["hip"])
+            #     a_id = actuator_for_joint(model, thigh_j)
+            #     data.ctrl[a_id] = pd_for_joint(model, data, thigh_j, target_angles["thigh"])
+            #     a_id = actuator_for_joint(model, calf_j)
+            #     data.ctrl[a_id] = pd_for_joint(model, data, calf_j, target_angles["calf"])
     
             # Keyboard control
             control_target = keyboard_controller.control_target.copy()
