@@ -50,7 +50,7 @@ def _on_press(key):
                 control_target[idx] = direction * 2.0
         else:
             with ctrl_lock:
-                control_target[idx] += np.deg2rad(direction * 10.0 * 0.2)
+                control_target[idx] += np.deg2rad(direction * 10.0 * 0.5)
                 
 def _on_release(key):
     if key in KEY_TO_CTRL_INDEX:
@@ -58,10 +58,6 @@ def _on_release(key):
         if idx < 4:
             with ctrl_lock:
                 control_target[idx] = 0.0
-        else:
-            with ctrl_lock:
-                control_target[idx] = 0
-
 
 if __name__ == "__main__":
     import time

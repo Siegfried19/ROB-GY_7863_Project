@@ -5,6 +5,7 @@ import numpy as np
 import cvxpy
 import time
 import keyboard_controller
+import matplotlib.pyplot as plt
 
 LEG = ["FL","FR","RL","RR"]
 site_id     = {leg: None for leg in LEG}
@@ -20,11 +21,12 @@ kp_thigh, kd_thigh = 80.0, 6.0
 kp_calf, kd_calf = 60.0, 4.0
 
 # PID gains for body position and orientation
-Kv = np.diag([3.0, 3.0, 4.0])
+Kv = np.diag([10.0, 10.0, 10.0])
 Ki_v = np.diag([0.3, 0.3, 0.4])
-KR = np.diag([4.0, 4.0, 4.0])
-Kw = np.diag([0.6, 0.6, 0.8])
-KI_tau = np.diag([0.3, 0.3, 0.3])
+KR = np.diag([90.0, 120.0, 120.0])
+Kw = np.diag([3.6, 3.6, 3.8])
+# KI_tau = np.diag([0.3, 0.3, 0.3])
+KI_tau = np.diag([1, 1, 1])
 
 # Thruster optimization parameters
 rho = 0.1                       # 平滑
@@ -37,6 +39,7 @@ g = None
 f_prev = {leg: np.zeros(3) for leg in LEG}  # 上次喷口力向量，模是力
 eta_v = np.zeros(3) # 积分误差速度
 eta_tau = np.zeros(3)   # 积分误差角速度
+error_log = []  # (time, ev) samples for plotting
 
 # Utility functions
 def get_R_from_xmat(xmat9):
@@ -154,7 +157,7 @@ def solve_thrusters_SOCP(Fd_body, tau_d, r_list, a_list, u_max_list,
 2. 内环 - 优化计算喷口推力（机体系） - 如何保证是突优化？
 R_d: 期望机体系在世界系的旋转矩阵
 '''
-def control(model, data, vd_body, rotation, omega_d_desired=np.zeros(3), omegadot_d_desired=np.zeros(3)):
+def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), omegadot_d_desired=np.zeros(3)):
     base_bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
     
     # 质量、惯量与姿态
@@ -168,9 +171,9 @@ def control(model, data, vd_body, rotation, omega_d_desired=np.zeros(3), omegado
     # J0_body = R_world_body.T @ J0_world @ R_world_body
     
     # 速度
-    omega_body = data.cvel[base_bid][0:3].copy()              # ω_body
-    v_body     = data.cvel[base_bid][3:6].copy()              # v_body (COM linear vel
-    
+    omega_body = R_world_body.T @ data.cvel[base_bid][0:3].copy()              # ω_body
+    v_body     = R_world_body.T @ data.cvel[base_bid][3:6].copy()              # v_body (COM linear vel
+
     # 重力
     g_body = R_world_body.T @ g
     
@@ -183,20 +186,20 @@ def control(model, data, vd_body, rotation, omega_d_desired=np.zeros(3), omegado
     Fd_world = R_world_body @ Fd_body
     
     # 计算期望力矩
-    eR_des = vee(Rd.T @ R_world_body)   # 在 “期望机体系 desired-body” 下的旋转误差
+    eR_des = R_world_body.T @ Rd @ vee(Rd.T @ R_world_body)   # 在 “期望机体系 desired-body” 下的旋转误差
     omega_d_in_body = R_world_body.T @ Rd @ omega_d_desired
     
     omega_d_in_body = R_world_body.T @ Rd @ omega_d_desired
     eomega_body = omega_body - omega_d_in_body
     global eta_tau
-    eta_tau = np.clip(eta_tau + eR_des * model.opt.timestep, -1.0, 1.0)
+    eta_tau = np.clip(eta_tau + eR_des * model.opt.timestep, -10.0, 10.0)
     
     # 前馈项：把 \dot{ω}_d 从期望系转到 body
     omegadot_d_in_body = R_world_body.T @ Rd @ omegadot_d_desired
     coriolis_like = hat(omega_body) @ (R_world_body.T @ Rd @ omega_d_desired)  # hat(ω) R^T R_d ω_d
-    ff_term = 0
+    ff_term = - J0 @ (coriolis_like - omegadot_d_in_body)
 
-    tau_d = (- KR @ eR_des - Kw @ eomega_body
+    tau_d = (- KR @ eR_des - Kw @ eomega_body + np.cross(omega_body, J0 @ omega_body)
              + ff_term + KI_tau @ eta_tau)
 
     B_list = []  # 喷口轴
@@ -221,12 +224,36 @@ def control(model, data, vd_body, rotation, omega_d_desired=np.zeros(3), omegado
     
     data.xfrc_applied[base_bid, 0:3] = F_world
     data.xfrc_applied[base_bid, 3:6] = tau_world
-    print(f"F_world: {Fd_body + m0 * g_body}", f"ev: {ev}")
-    
+    # print(f"F_world: {Fd_body + m0 * g_body}", f"ev: {ev}")
+    print(tau_d)
+    error_log.append((float(data.time), ev.copy()))
+
+
+def save_virtual_control_error_plot(path="virtual_control_error.png"):
+    if not error_log:
+        print("No virtual control error data recorded; skipping plot.")
+        return
+    times = np.array([entry[0] for entry in error_log])
+    errors = np.stack([entry[1] for entry in error_log])
+
+    plt.figure()
+    plt.plot(times, errors[:, 0], label="vx error")
+    plt.plot(times, errors[:, 1], label="vy error")
+    plt.plot(times, errors[:, 2], label="vz error")
+    plt.xlabel("Time [s]")
+    plt.ylabel("Velocity error [m/s]")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+    print(f"Saved virtual control error plot to {path}")
+
 
 def stand_then_fly(model_path=os.path.join("unitree_go2", "scene.xml")):
     model = mujoco.MjModel.from_xml_path(model_path)
     data = mujoco.MjData(model)
+    base_bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
+    
     
     target_angles = {
         "hip": 0.0,
@@ -245,8 +272,12 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene.xml")):
         data.qpos[model.jnt_qposadr[hip_jid[leg]]] = target_angles["hip"]
         data.qpos[model.jnt_qposadr[thigh_jid[leg]]] = target_angles["thigh"]
         data.qpos[model.jnt_qposadr[calf_jid[leg]]] = target_angles["calf"]
-    
     mujoco.mj_forward(model, data)
+    cin = data.cinert[base_bid]
+    J0 = np.array([[cin[0], cin[3], cin[4]],
+                 [cin[3], cin[1], cin[5]],
+                 [cin[4], cin[5], cin[2]]])
+    
     with mujoco.viewer.launch_passive(model, data) as viewer:
         last_log = 0.0
         while viewer.is_running():
@@ -266,10 +297,11 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene.xml")):
             # Keyboard control
             control_target = keyboard_controller.control_target.copy()
             # Flight control
-            control(model, data, control_target[:3], control_target[3:6])
+            control(model, data, control_target[:3], control_target[3:6], J0)
             # print(control_target[:3])
             mujoco.mj_step(model, data)
             viewer.sync()
+    save_virtual_control_error_plot()
 
 if __name__ == "__main__":
     stand_then_fly()
