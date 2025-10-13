@@ -236,10 +236,10 @@
     <motor class="abduction" name="RR_hip" joint="RR_hip_joint"/>
     <motor class="hip" name="RR_thigh" joint="RR_thigh_joint"/>
     <motor class="knee" name="RR_calf" joint="RR_calf_joint"/>
-    <general name="FL_rocket_thruster" site="FL_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
-    <general name="FR_rocket_thruster" site="FR_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
-    <general name="RL_rocket_thruster" site="RL_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
-    <general name="RR_rocket_thruster" site="RR_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
+    <general name="FL_rocket_thruster" site="FL_rocket_site" ctrllimited="true" ctrlrange="0 100" gear="0 0 1 0 0 0"/>
+    <general name="FR_rocket_thruster" site="FR_rocket_site" ctrllimited="true" ctrlrange="0 100" gear="0 0 1 0 0 0"/>
+    <general name="RL_rocket_thruster" site="RL_rocket_site" ctrllimited="true" ctrlrange="0 100" gear="0 0 1 0 0 0"/>
+    <general name="RR_rocket_thruster" site="RR_rocket_site" ctrllimited="true" ctrlrange="0 100" gear="0 0 1 0 0 0"/>
   </actuator>
 
   <!-- <keyframe>

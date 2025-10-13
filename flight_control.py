@@ -64,7 +64,7 @@ def control(model, data, vd_body, Rd):
     Fd_body = R_world_body.T @ Fd_world
 
     Rerr = Rd.T @ R_world_body
-    tau_d = (J0 @ (Kw @ (np.zeros(3) - omega_body))
+    tau_d = (J0_world @ (Kw @ (np.zeros(3) - omega_body))
             + KR @ vee(Rerr) + KI_tau @ eta_tau)
 
     # 组 r_i^B, a_i (当前喷口轴)：
