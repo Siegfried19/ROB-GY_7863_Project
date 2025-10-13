@@ -23,7 +23,7 @@ kp_calf, kd_calf = 60.0, 4.0
 # PID gains for body position and orientation
 Kv = np.diag([10.0, 10.0, 10.0])
 Ki_v = np.diag([0.3, 0.3, 0.4])
-KR = np.diag([90.0, 120.0, 120.0])
+KR = np.diag([9.0, 12.0, 12.0])
 Kw = np.diag([5.6, 5.6, 5.8])
 # KI_tau = np.diag([0.3, 0.3, 0.3])
 KI_tau = np.diag([1, 1, 1])
@@ -285,6 +285,7 @@ def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), ome
     
     u_cmd = np.linalg.norm(f_star, axis=1)
     b_body = (f_star.T / (u_cmd + 1e-9)).T  # 4x3 单位方向
+    print(f"u_cmd: {u_cmd}")
     # print(r_list)
     # print(eF, eT)
     # 反解关节角度
@@ -389,7 +390,7 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene_moon.xml")):
             # Flight control
             control(model, data, control_target[:3], control_target[3:6], J0)
             # print(control_target[:3])
-            print(f"t = {data.time:.6f} s")
+            # print(f"t = {data.time:.6f} s")
             mujoco.mj_step(model, data)
             viewer.sync()
     save_virtual_control_error_plot()

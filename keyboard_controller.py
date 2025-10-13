@@ -29,7 +29,7 @@ listener = None
 
 def start_listener(suppress=True):
     global listener, mouse_listener
-    listener = keyboard.Listener(on_press=_on_press, on_release=_on_release, suppress=suppress)
+    listener = keyboard.Listener(on_press=_on_press, on_release=_on_release, suppress=True)
     listener.daemon = True
     listener.start()
     print("[manual_controller] Keyboard listener started.")
