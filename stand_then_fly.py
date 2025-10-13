@@ -126,9 +126,13 @@ def solve_thrusters_SOCP(Fd_body, tau_d, r_list, a_list, u_max_list,
     f = [cvxpy.Variable(3) for _ in range(n)]
     epsF = cvxpy.Variable(3)   # 合力松弛
     epsT = cvxpy.Variable(3)   # 力矩松弛
+    t = cvxpy.Variable(n)                 # t[i] 近似 ||f_i||
 
     cons = []
     cons += [cvxpy.sum(f) == Fd_body + epsF]
+    
+    for i in range(n):
+        cons += [t[i] >= cvxpy.norm(f[i], 2)]   # SOC 外化
     # 力矩平衡：∑ r×f = τ + epsT
     torque_cols = [cvxpy.hstack([ r_list[i][1]*f[i][2] - r_list[i][2]*f[i][1],
                                r_list[i][2]*f[i][0] - r_list[i][0]*f[i][2],
@@ -151,6 +155,11 @@ def solve_thrusters_SOCP(Fd_body, tau_d, r_list, a_list, u_max_list,
     if f_prev is not None:
         for i in range(n):
             obj_terms.append(rho * cvxpy.norm(f[i] - f_prev[i], 2))
+            
+    # 推力均分
+    t_mean = cvxpy.sum(t) / n
+    mu_var = 30.0   # 权重，按需要调
+    obj_terms.append(mu_var * cvxpy.sum_squares(t - t_mean))
 
     obj_terms += [lamF * cvxpy.norm(epsF, 2), lamT * cvxpy.norm(epsT, 2)]
     prob = cvxpy.Problem(cvxpy.Minimize(cvxpy.sum(obj_terms)), cons)
@@ -255,8 +264,8 @@ def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), ome
         B_list.append(bB)
         r_list.append(rB)
         a_list.append(z_body_body / (np.linalg.norm(z_body_body) + 1e-9)) # 机体的 +z 轴（世界）
-        if leg == "RL":
-            print(pos_site_world)
+        # if leg == "RL":
+        #     print(pos_site_world)
         
     # # test
     # F_world  = R_world_body @ Fd_body
@@ -329,7 +338,7 @@ def save_virtual_control_error_plot(path="virtual_control_error.png"):
     print(f"Saved virtual control error plot to {path}")
 
 
-def stand_then_fly(model_path=os.path.join("unitree_go2", "scene.xml")):
+def stand_then_fly(model_path=os.path.join("unitree_go2", "scene_moon.xml")):
     model = mujoco.MjModel.from_xml_path(model_path)
     data = mujoco.MjData(model)
     base_bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
@@ -380,6 +389,7 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene.xml")):
             # Flight control
             control(model, data, control_target[:3], control_target[3:6], J0)
             # print(control_target[:3])
+            print(f"t = {data.time:.6f} s")
             mujoco.mj_step(model, data)
             viewer.sync()
     save_virtual_control_error_plot()
