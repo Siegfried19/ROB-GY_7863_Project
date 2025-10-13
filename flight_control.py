@@ -49,9 +49,9 @@ def control(model, data, vd_body, Rd):
     com_world = data.subtree_com[base_bid].copy()
     J0_world = data.subtree_inertia[base_bid].reshape(3, 3)
     
-    R_world_body = get_R_from_xmat(data.xmat[base_bid])
+    R_world_body = get_R_from_xmat(data.xmat[base_bid]) # 机体姿态（世界）
     
-    p_body_world = data.xpos[base_bid].copy()
+    p_body_world = data.xpos[base_bid].copy()   # 机体质心位置（世界）
     v_body = data.cvel[base_bid][3:6].copy()  # or data.qvel[0:3] if free joint layout
     omega_body = data.cvel[base_bid][0:3].copy()
 
