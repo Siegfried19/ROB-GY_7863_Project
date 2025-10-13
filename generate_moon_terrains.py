@@ -27,7 +27,7 @@ def generate_random_moon_png(crater_size=0.5, crater_depth=0.08, size=512, crate
 
 # 示例使用：
 # 小而深的坑
-generate_random_moon_png(crater_size=0.4, crater_depth=0.03)
+generate_random_moon_png(crater_size=0.5, crater_depth=0.02)
 
 # 大而浅的坑
 # generate_moon_png(crater_size=0.6, crater_depth=0.01)

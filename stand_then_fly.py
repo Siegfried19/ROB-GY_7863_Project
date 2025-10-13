@@ -21,7 +21,7 @@ kp_thigh, kd_thigh = 80.0, 6.0
 kp_calf, kd_calf = 60.0, 4.0
 
 # PID gains for body position and orientation
-Kv = np.diag([10.0, 10.0, 10.0])
+Kv = np.diag([40.0, 60.0, 40.0])
 Ki_v = np.diag([0.3, 0.3, 0.4])
 KR = np.diag([9.0, 12.0, 12.0])
 Kw = np.diag([5.6, 5.6, 5.8])
@@ -275,7 +275,7 @@ def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), ome
     # data.xfrc_applied[base_bid, 3:6] = tau_world
     # # print(f"F_world: {Fd_body + m0 * g_body}", f"ev: {ev}")
     # print(tau_d)
-    # error_log.append((float(data.time), ev.copy()))
+    error_log.append((float(data.time), ev.copy()))
 
     # 优化计算喷口推力
     u_max_list = [u_max for _ in LEG]
@@ -388,7 +388,28 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene_moon.xml")):
             # Keyboard control
             control_target = keyboard_controller.control_target.copy()
             # Flight control
-            control(model, data, control_target[:3], control_target[3:6], J0)
+            if keyboard_controller.flags['reset']:
+                # Leg PD control
+                for leg in LEG:
+                    hip_j = hip_jid[leg]
+                    thigh_j = thigh_jid[leg]
+                    calf_j = calf_jid[leg]
+                    
+                    a_id = actuator_for_joint(model, hip_j)
+                    data.ctrl[a_id] = pd_for_joint(model, data, hip_j, target_angles["hip"])
+                    a_id = actuator_for_joint(model, thigh_j)
+                    data.ctrl[a_id] = pd_for_joint(model, data, thigh_j, target_angles["thigh"])
+                    a_id = actuator_for_joint(model, calf_j)
+                    data.ctrl[a_id] = pd_for_joint(model, data, calf_j, target_angles["calf"])
+                    
+                    data.ctrl[thr_act_id[leg]] = 0
+
+                    flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, leg + "_flame")
+                    brightness = min(1.0, 0 / 50.0)
+                    model.geom_rgba[flame_id, 3] = brightness
+                    
+            else:
+                control(model, data, control_target[:3], control_target[3:6], J0) 
             # print(control_target[:3])
             # print(f"t = {data.time:.6f} s")
             mujoco.mj_step(model, data)

@@ -53,6 +53,14 @@ def _on_press(key):
                 control_target[idx] += np.deg2rad(direction * 10.0 * 0.1)
                 
 def _on_release(key):
+    if key == SPECIAL_KEYS['reset']:
+        with ctrl_lock:
+            flags['reset'] = False
+        return
+    if key == SPECIAL_KEYS['quit']:
+        with ctrl_lock:
+            flags['quit'] = False
+        return
     if key in KEY_TO_CTRL_INDEX:
         idx, _ = KEY_TO_CTRL_INDEX[key]
         if idx < 4:
