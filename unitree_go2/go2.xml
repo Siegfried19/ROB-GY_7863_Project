@@ -240,7 +240,6 @@
     <general name="FR_rocket_thruster" site="FR_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
     <general name="RL_rocket_thruster" site="RL_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
     <general name="RR_rocket_thruster" site="RR_rocket_site" ctrllimited="true" ctrlrange="0 200" gear="0 0 1 0 0 0"/>
-    <general name=>
   </actuator>
 
   <!-- <keyframe>

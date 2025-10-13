@@ -9,10 +9,10 @@ KEY_TO_CTRL_INDEX = {
     keyboard.KeyCode.from_char('s'): (0, -1),
     keyboard.KeyCode.from_char('a'): (1, +1),
     keyboard.KeyCode.from_char('d'): (1, -1),
-    keyboard.KeyCode.from_char('q'): (2, +1),
-    keyboard.KeyCode.from_char('e'): (2, -1),
-    keyboard.KeyCode.from_char('c'): (3, -1),
-    keyboard.Key.space: (3, -1)
+    keyboard.KeyCode.from_char('q'): (5, +1),
+    keyboard.KeyCode.from_char('e'): (5, -1),
+    keyboard.KeyCode.from_char('c'): (2, -1),
+    keyboard.Key.space: (2, 1)
 }
 
 SPECIAL_KEYS = {
@@ -23,7 +23,7 @@ SPECIAL_KEYS = {
 flags = {'reset': False, 'quit': False}
 
 ctrl_lock = threading.Lock()
-control_target = np.zeros(4, dtype=float)
+control_target = np.zeros(6, dtype=float)
 listener = None
 
 
@@ -50,13 +50,17 @@ def _on_press(key):
                 control_target[idx] = direction * 2.0
         else:
             with ctrl_lock:
-                control_target[idx] = direction
+                control_target[idx] += np.deg2rad(direction * 10.0 * 0.2)
                 
 def _on_release(key):
     if key in KEY_TO_CTRL_INDEX:
         idx, _ = KEY_TO_CTRL_INDEX[key]
-        with ctrl_lock:
-            control_target[idx] = 0.0
+        if idx < 4:
+            with ctrl_lock:
+                control_target[idx] = 0.0
+        else:
+            with ctrl_lock:
+                control_target[idx] = 0
 
 
 if __name__ == "__main__":

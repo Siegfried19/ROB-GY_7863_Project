@@ -52,6 +52,12 @@ def hat(w):
     return np.array([[0, -z,  y],
                      [z,  0, -x],
                      [-y, x,  0]])
+    
+def Rz(dpsi):
+    c, s = np.cos(dpsi), np.sin(dpsi)
+    return np.array([[ c, -s, 0],
+                     [ s,  c, 0],
+                     [ 0,  0, 1]], dtype=float)
 
 def actuator_for_joint(model, joint_id):
     """Find actuator index that drives the given joint id. Returns -1 if none."""
@@ -146,18 +152,20 @@ def solve_thrusters_SOCP(Fd_body, tau_d, r_list, a_list, u_max_list,
 '''
 1. 外环 - 计算期望的机体力和力矩 - 所有速度以及位置控制都是基于当前坐标系的
 2. 内环 - 优化计算喷口推力（机体系） - 如何保证是突优化？
+R_d: 期望机体系在世界系的旋转矩阵
 '''
-def control(model, data, vd_body, Rd, omega_d_desired=np.zeros(3), omegadot_d_desired=np.zeros(3)):
+def control(model, data, vd_body, rotation, omega_d_desired=np.zeros(3), omegadot_d_desired=np.zeros(3)):
     base_bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
     
     # 质量、惯量与姿态
-    m0        = data.subtree_mass[base_bid]
+    m0        = model.body_subtreemass[base_bid]
     com_world = data.subtree_com[base_bid].copy()
-    J0_world  = data.subtree_inertia[base_bid].reshape(3, 3)   # 惯量(about COM) in world
+    # J0_world  = data.cinert[base_bid].reshape(3, 3)   # 惯量(about COM) in world
     R_world_body = get_R_from_xmat(data.xmat[base_bid])        # body→world
+    Rd = Rz(rotation[2])
     
     # 惯量转到 body：J_body = R^T J_world R
-    J0_body = R_world_body.T @ J0_world @ R_world_body
+    # J0_body = R_world_body.T @ J0_world @ R_world_body
     
     # 速度
     omega_body = data.cvel[base_bid][0:3].copy()              # ω_body
@@ -169,9 +177,9 @@ def control(model, data, vd_body, Rd, omega_d_desired=np.zeros(3), omegadot_d_de
     # 计算期望力
     ev = vd_body - v_body 
     global eta_v
-    eta_v = np.clip(eta_v + ev * data.time_step, -2.0, 2.0)
+    eta_v = np.clip(eta_v + ev * model.opt.timestep, -2.0, 2.0)
     
-    Fd_body = m0 * (Kv @ ev + Ki_v @ eta_v) + m0 * g_body
+    Fd_body = m0 * (Kv @ ev + Ki_v @ eta_v) - m0 * g_body
     Fd_world = R_world_body @ Fd_body
     
     # 计算期望力矩
@@ -181,14 +189,14 @@ def control(model, data, vd_body, Rd, omega_d_desired=np.zeros(3), omegadot_d_de
     omega_d_in_body = R_world_body.T @ Rd @ omega_d_desired
     eomega_body = omega_body - omega_d_in_body
     global eta_tau
-    eta_tau = np.clip(eta_tau + eR_des * data.time_step, -1.0, 1.0)
+    eta_tau = np.clip(eta_tau + eR_des * model.opt.timestep, -1.0, 1.0)
     
     # 前馈项：把 \dot{ω}_d 从期望系转到 body
     omegadot_d_in_body = R_world_body.T @ Rd @ omegadot_d_desired
     coriolis_like = hat(omega_body) @ (R_world_body.T @ Rd @ omega_d_desired)  # hat(ω) R^T R_d ω_d
-    ff_term = - J0_body @ (coriolis_like - omegadot_d_in_body)
+    ff_term = 0
 
-    tau_d = (- KR @ eR_des - Kw @ eomega_body + np.cross(omega_body, J0_body @ omega_body) 
+    tau_d = (- KR @ eR_des - Kw @ eomega_body
              + ff_term + KI_tau @ eta_tau)
 
     B_list = []  # 喷口轴
@@ -207,14 +215,18 @@ def control(model, data, vd_body, Rd, omega_d_desired=np.zeros(3), omegadot_d_de
         r_list.append(rB)
         a_list.append(z_body_body / (np.linalg.norm(z_body_body) + 1e-9)) # 机体的 +z 轴（世界）
         
+    # test
+    F_world  = R_world_body @ Fd_body
+    tau_world = R_world_body @ tau_d
+    
+    data.xfrc_applied[base_bid, 0:3] = F_world
+    data.xfrc_applied[base_bid, 3:6] = tau_world
+    print(f"F_world: {Fd_body + m0 * g_body}", f"ev: {ev}")
     
 
 def stand_then_fly(model_path=os.path.join("unitree_go2", "scene.xml")):
     model = mujoco.MjModel.from_xml_path(model_path)
     data = mujoco.MjData(model)
-    
-    setup_ids(model)
-    setup_gravity(model)
     
     target_angles = {
         "hip": 0.0,
@@ -222,6 +234,12 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene.xml")):
         "calf": -1.57,
     }
     
+    control_target = np.zeros(6, dtype=float)
+    
+    setup_ids(model)
+    setup_gravity(model)
+    keyboard_controller.start_listener()
+       
     mujoco.mj_resetData(model, data)
     for leg in LEG:
         data.qpos[model.jnt_qposadr[hip_jid[leg]]] = target_angles["hip"]
@@ -229,4 +247,29 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene.xml")):
         data.qpos[model.jnt_qposadr[calf_jid[leg]]] = target_angles["calf"]
     
     mujoco.mj_forward(model, data)
+    with mujoco.viewer.launch_passive(model, data) as viewer:
+        last_log = 0.0
+        while viewer.is_running():
+            # Leg PD control
+            for leg in LEG:
+                hip_j = hip_jid[leg]
+                thigh_j = thigh_jid[leg]
+                calf_j = calf_jid[leg]
+                
+                a_id = actuator_for_joint(model, hip_j)
+                data.ctrl[a_id] = pd_for_joint(model, data, hip_j, target_angles["hip"])
+                a_id = actuator_for_joint(model, thigh_j)
+                data.ctrl[a_id] = pd_for_joint(model, data, thigh_j, target_angles["thigh"])
+                a_id = actuator_for_joint(model, calf_j)
+                data.ctrl[a_id] = pd_for_joint(model, data, calf_j, target_angles["calf"])
+    
+            # Keyboard control
+            control_target = keyboard_controller.control_target.copy()
+            # Flight control
+            control(model, data, control_target[:3], control_target[3:6])
+            # print(control_target[:3])
+            mujoco.mj_step(model, data)
+            viewer.sync()
 
+if __name__ == "__main__":
+    stand_then_fly()
