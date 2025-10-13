@@ -24,7 +24,7 @@ kp_calf, kd_calf = 60.0, 4.0
 Kv = np.diag([10.0, 10.0, 10.0])
 Ki_v = np.diag([0.3, 0.3, 0.4])
 KR = np.diag([90.0, 120.0, 120.0])
-Kw = np.diag([3.6, 3.6, 3.8])
+Kw = np.diag([5.6, 5.6, 5.8])
 # KI_tau = np.diag([0.3, 0.3, 0.3])
 KI_tau = np.diag([1, 1, 1])
 
@@ -255,7 +255,7 @@ def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), ome
         B_list.append(bB)
         r_list.append(rB)
         a_list.append(z_body_body / (np.linalg.norm(z_body_body) + 1e-9)) # 机体的 +z 轴（世界）
-        if leg == "FL":
+        if leg == "RL":
             print(pos_site_world)
         
     # # test
