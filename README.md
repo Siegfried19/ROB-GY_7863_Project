@@ -8,3 +8,9 @@ Test environment
 ```
 python -m mujoco.viewer --mjcf unitree_go2/scene.xml
 ```
+
+Install environment
+Test environment
+```
+conda env create -n space-robotics-project -f environment.yml
+```
