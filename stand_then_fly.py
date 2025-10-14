@@ -361,7 +361,7 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene_moon.xml")):
     model = mujoco.MjModel.from_xml_path(model_path)
     data = mujoco.MjData(model)
     base_bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
-    period = 0.002
+    period = 0.01
     
     target_angles = {
         "hip": 0.0,
