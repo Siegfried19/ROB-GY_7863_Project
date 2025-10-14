@@ -10,7 +10,7 @@
         <global azimuth="-130" elevation="-20"/>
     </visual>
 
-    <option gravity="0 0 -4.62" timestep="0.002"/> <!-- 月球重力 -->
+    <option gravity="0 0 -1.62" timestep="0.002"/> <!-- 月球重力 -->
 
     <asset>
         <!-- 天空与纹理 -->
