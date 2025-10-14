@@ -21,7 +21,7 @@ kp_thigh, kd_thigh = 80.0, 6.0
 kp_calf, kd_calf = 60.0, 4.0
 
 # PID gains for body position and orientation
-Kv = np.diag([40.0, 60.0, 40.0])
+Kv = np.diag([80.0, 80.0, 80.0])
 Ki_v = np.diag([0.3, 0.3, 0.4])
 KR = np.diag([9.0, 12.0, 12.0])
 Kw = np.diag([5.6, 5.6, 5.8])
@@ -35,13 +35,17 @@ u_max = 200.0                   # 见 xml 的 ctrlrange 上限
 
 g = None
 
-prev = {leg: 0.0 for leg in LEG}  # 上次 HAA 角度，用于奇异处回退
+prev_hip = {leg: 0.0 for leg in LEG}  # 上次 HAA 角度，用于奇异处回退
+prev_thigh = {leg: 0.0 for leg in LEG}       # 上次 HFE 角度，用于奇异处回退
+prev_u = {leg: 0.0 for leg in LEG}          # 上次喷口推力，用于平滑
 
 # Controller parameters
 f_prev = {leg: np.zeros(3) for leg in LEG}  # 上次喷口力向量，模是力
 eta_v = np.zeros(3) # 积分误差速度
 eta_tau = np.zeros(3)   # 积分误差角速度
 error_log = []  # (time, ev) samples for plotting
+
+last_f_star = None
 
 # Utility functions
 def get_R_from_xmat(xmat9):
@@ -204,7 +208,7 @@ def solve_hip_angles_from_body_dir(b_body_i, R_world_body, R_world_hip, alpha = 
 2. 内环 - 优化计算喷口推力（机体系） - 如何保证是突优化？
 R_d: 期望机体系在世界系的旋转矩阵
 '''
-def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), omegadot_d_desired=np.zeros(3)):
+def control(model, data, vd_body, rotation, J0, flag_c=False, omega_d_desired=np.zeros(3), omegadot_d_desired=np.zeros(3)):
     base_bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
     
     # 质量、惯量与姿态
@@ -279,45 +283,59 @@ def control(model, data, vd_body, rotation, J0, omega_d_desired=np.zeros(3), ome
 
     # 优化计算喷口推力
     u_max_list = [u_max for _ in LEG]
-    f_star, eF, eT = solve_thrusters_SOCP(Fd_body, tau_d, r_list, a_list, u_max_list,
-                                        f_prev=[f_prev[leg] for leg in LEG],
-                                        theta_max=theta_max, rho=rho)
+    if flag_c:
+        f_star, eF, eT = solve_thrusters_SOCP(Fd_body, tau_d, r_list, a_list, u_max_list,
+                                            f_prev=[f_prev[leg] for leg in LEG],
+                                            theta_max=theta_max, rho=rho)
     
-    u_cmd = np.linalg.norm(f_star, axis=1)
-    b_body = (f_star.T / (u_cmd + 1e-9)).T  # 4x3 单位方向
-    print(f"u_cmd: {u_cmd}")
-    # print(r_list)
-    # print(eF, eT)
-    # 反解关节角度
-    RR_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "RR_flame")
-    RL_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "RL_flame")
-    FR_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "FR_flame")
-    FL_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "FL_flame")
-    for i, leg in enumerate(LEG):
-        f_prev[leg] = f_star[i].copy()
-        R_world_hip  = get_R_from_xmat(data.xmat[hip_bid[leg]])
-        hip, thigh = solve_hip_angles_from_body_dir(
-        b_body_i = b_body[i],
-        R_world_body = R_world_body,
-        R_world_hip  = R_world_hip,
-        alpha = 0.909,
-        prev_qHAA = prev[leg])
-        prev[leg] = hip
-        
-        # # 写到 data.qpos
-        # data.qpos[model.jnt_qposadr[hip_jid[leg]]] = hip
-        # data.qpos[model.jnt_qposadr[thigh_jid[leg]]] = thigh
-        
-        # 电机PD控制
-        hip_act_id = actuator_for_joint(model, hip_jid[leg])
-        data.ctrl[hip_act_id] = pd_for_joint(model, data, hip_jid[leg], hip)
-        thigh_act_id = actuator_for_joint(model, thigh_jid[leg])
-        data.ctrl[thigh_act_id] = pd_for_joint(model, data, thigh_jid[leg], thigh)
-        data.ctrl[thr_act_id[leg]] = u_cmd[i]
+        u_cmd = np.linalg.norm(f_star, axis=1)
+        b_body = (f_star.T / (u_cmd + 1e-9)).T  # 4x3 单位方向
+        print(f"u_cmd: {u_cmd}")
+        # print(r_list)
+        # print(eF, eT)
+        # 反解关节角度
+        RR_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "RR_flame")
+        RL_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "RL_flame")
+        FR_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "FR_flame")
+        FL_flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "FL_flame")
+        for i, leg in enumerate(LEG):
+            f_prev[leg] = f_star[i].copy()
+            R_world_hip  = get_R_from_xmat(data.xmat[hip_bid[leg]])
+            hip, thigh = solve_hip_angles_from_body_dir(
+            b_body_i = b_body[i],
+            R_world_body = R_world_body,
+            R_world_hip  = R_world_hip,
+            alpha = 0.909,
+            prev_qHAA = prev_hip[leg])
+            prev_hip[leg] = hip
+            prev_thigh[leg] = thigh
 
-        flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, leg + "_flame")
-        brightness = min(1.0, u_cmd[i] / 50.0)
-        model.geom_rgba[flame_id, 3] = brightness
+            # # 写到 data.qpos
+            # data.qpos[model.jnt_qposadr[hip_jid[leg]]] = hip
+            # data.qpos[model.jnt_qposadr[thigh_jid[leg]]] = thigh
+            
+            # 电机PD控制
+            hip_act_id = actuator_for_joint(model, hip_jid[leg])
+            data.ctrl[hip_act_id] = pd_for_joint(model, data, hip_jid[leg], hip)
+            thigh_act_id = actuator_for_joint(model, thigh_jid[leg])
+            data.ctrl[thigh_act_id] = pd_for_joint(model, data, thigh_jid[leg], thigh)
+            data.ctrl[thr_act_id[leg]] = u_cmd[i]
+
+            flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, leg + "_flame")
+            brightness = min(1.0, u_cmd[i] / 50.0)
+            model.geom_rgba[flame_id, 3] = brightness
+        
+    else:
+        for i, leg in enumerate(LEG):
+            hip_act_id = actuator_for_joint(model, hip_jid[leg])
+            data.ctrl[hip_act_id] = pd_for_joint(model, data, hip_jid[leg], prev_hip[leg])
+            thigh_act_id = actuator_for_joint(model, thigh_jid[leg])
+            data.ctrl[thigh_act_id] = pd_for_joint(model, data, thigh_jid[leg], prev_thigh[leg])
+            data.ctrl[thr_act_id[leg]] = prev_u[leg]
+
+            flame_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, leg + "_flame")
+            brightness = min(1.0, prev_u[leg] / 50.0)
+            model.geom_rgba[flame_id, 3] = brightness
 
 def save_virtual_control_error_plot(path="virtual_control_error.png"):
     if not error_log:
@@ -343,7 +361,7 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene_moon.xml")):
     model = mujoco.MjModel.from_xml_path(model_path)
     data = mujoco.MjData(model)
     base_bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
-    
+    period = 0.002
     
     target_angles = {
         "hip": 0.0,
@@ -368,7 +386,8 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene_moon.xml")):
     J0 = np.array([[cin[0], cin[3], cin[4]],
                  [cin[3], cin[1], cin[5]],
                  [cin[4], cin[5], cin[2]]])
-    
+    next_t = data.time + period
+    flag_c = True
     with mujoco.viewer.launch_passive(model, data) as viewer:
         last_log = 0.0
         while viewer.is_running():
@@ -386,6 +405,10 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene_moon.xml")):
             #     data.ctrl[a_id] = pd_for_joint(model, data, calf_j, target_angles["calf"])
     
             # Keyboard control
+            if data.time + 1e-12 >= next_t:
+                flag_c = True
+                next_t += period
+            
             control_target = keyboard_controller.control_target.copy()
             # Flight control
             if keyboard_controller.flags['reset']:
@@ -409,9 +432,10 @@ def stand_then_fly(model_path=os.path.join("unitree_go2", "scene_moon.xml")):
                     model.geom_rgba[flame_id, 3] = brightness
                     
             else:
-                control(model, data, control_target[:3], control_target[3:6], J0) 
+                control(model, data, control_target[:3], control_target[3:6], J0, flag_c) 
             # print(control_target[:3])
             # print(f"t = {data.time:.6f} s")
+            flag_c = False
             mujoco.mj_step(model, data)
             viewer.sync()
     save_virtual_control_error_plot()
