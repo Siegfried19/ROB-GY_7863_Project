@@ -19,7 +19,7 @@ import register_envs
 parser = argparse.ArgumentParser()
 parser.add_argument('--env_name', type=str, default="Go2FlyingingGround-v0",
                     help='save path')
-parser.add_argument('--save_path', type=str, default="output",
+parser.add_argument('--save_path', type=str, default="output/sb3_fly",
                     help='save path')
 parser.add_argument('--resume', type=bool, default=False,
                     help='whether to resume training')
@@ -35,14 +35,14 @@ def make_env():
 
 
 
-wandb.init(
-    project="Go2Moon_SB3",
-    name="flying",
-    sync_tensorboard=True,
-)
-
 
 def main():
+    wandb.init(
+        project="Go2Moon_SB3",
+        name="flying",
+        sync_tensorboard=True,
+    )
+
 
     NUM_ENVS = 8# 并行环境数量，可根据 CPU 调整
     vec_env = SubprocVecEnv([make_env() for _ in range(NUM_ENVS)])
@@ -63,6 +63,7 @@ def main():
         gamma=0.99,
         gae_lambda=0.95,
         ent_coef=0.01,
+        tensorboard_log = args.save_path+"/logs",
     )
 
 
@@ -70,21 +71,21 @@ def main():
     checkpoint_cb = CheckpointCallback(
         save_freq=500000,                    # 每隔多少 step 保存一次
         save_path= args.save_path,
-        name_prefix="/sb3_fly",
+        name_prefix="sb3_fly",
     )
 
     callback_list = CallbackList([
         checkpoint_cb,
         WandbCallback(
             gradient_save_freq=1000,
-            model_save_path="./models/",
+            model_save_path=args.save_path+"/models/",
             verbose=2
         )
     ])
 
 
     model.learn(
-        total_timesteps=2_000_000,           # 训练 200 万步
+        total_timesteps=20_000_000,           # 训练 200 万步
         callback=callback_list,
     )
 
