@@ -8,14 +8,14 @@ from collections import deque
 import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
-from stable_baselines3.common.callbacks import CheckpointCallback,CallbackList
+from stable_baselines3.common.callbacks import CheckpointCallback,CallbackList,EveryNTimesteps
 from stable_baselines3.common.monitor import Monitor
 from wandb.integration.sb3 import WandbCallback
 import wandb
 from go2_env import Go2EnvMoonFly
 import wandb  
 import register_envs
-
+from stable_baselines3.common.monitor import Monitor
 parser = argparse.ArgumentParser()
 parser.add_argument('--env_name', type=str, default="Go2FlyingingGround-v0",
                     help='save path')
@@ -31,8 +31,11 @@ args = parser.parse_args()
 
 
 def make_env():
-    return lambda: gym.make(args.env_name)
-
+    def _init():
+        env = gym.make(args.env_name)
+        env = Monitor(env)           # <<< 必须加！
+        return env
+    return _init
 
 
 
@@ -67,11 +70,13 @@ def main():
     )
 
 
-
-    checkpoint_cb = CheckpointCallback(
-        save_freq=500000,                    # 每隔多少 step 保存一次
-        save_path= args.save_path,
-        name_prefix="sb3_fly",
+    checkpoint_cb = EveryNTimesteps(
+        n_steps=500000,
+        callback=CheckpointCallback(
+            save_freq=1,   
+            save_path=args.save_path,
+            name_prefix="sb3_fly"
+        )
     )
 
     callback_list = CallbackList([

@@ -156,13 +156,13 @@ def compute_reward_fly(data, done, reason):
     # ----------------------
     # 3) 推力能量惩罚
     # ----------------------
-    w_jet = 1.0
+    w_jet = 0.0
     r_jet = - w_jet * np.linalg.norm(jet_force, ord=2)
 
     # ----------------------
     # 4) 生存/时间奖励（可选：每步给一点点）
     # ----------------------
-    r_alive = 0.1
+    r_alive = 0.01
 
     reward = r_dist + r_pose + r_jet + r_alive
 

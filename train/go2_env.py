@@ -164,7 +164,7 @@ class Go2EnvMoonFly(gym.Env):
         # 3. 合并 ctrl
         # ----------------------------------------------------
         self.data.ctrl[:12] = joint_torque
-        self.data.ctrl[12:16] = 0# jet_force
+        self.data.ctrl[12:16] = jet_force
 
         # 执行仿真
         mujoco.mj_step(self.model, self.data)
@@ -214,7 +214,7 @@ class Go2EnvMoonFly(gym.Env):
         if dist_xy > CRATER_RADIUS:
             return True, "escaped"
 
-        if abs(roll) > 0.7 or abs(pitch) > 1.0:
+        if abs(roll) > 0.5 or abs(pitch) > 0.5:
             return True, "unstable_orientation"
 
         if z > 3.0:
