@@ -60,7 +60,7 @@ def quat_to_euler_xyz(q):  # q = [w, x, y, z]
     roll, pitch, yaw = rot.as_euler('xyz', degrees=False)
     return roll, pitch, yaw
 
-def compute_reward(data, done):
+def compute_reward_walk(data, done):
     # 基座速度：qvel[0:3] 线速度; qvel[3:6] 角速度（MuJoCo惯例）
     vx, vy, wz = data.qvel[0], data.qvel[1], data.qvel[5]
     # 姿态
@@ -88,7 +88,7 @@ def compute_reward(data, done):
         r += cfg.r_done
     return float(r)
 
-def compute_reward_jump(data, done, ref = LunarJumpRef(), rw= RewardJumpCfg()):
+def compute_reward_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpCfg()):
     t = data.time
 
     z  = float(data.qpos[2])

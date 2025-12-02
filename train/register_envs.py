@@ -2,12 +2,12 @@ from gym.envs.registration import register
 
 register(
     id="Go2WalkingGround-v0",
-    entry_point="go2_env:Go2Env",  
+    entry_point="go2_env:Go2EnvMoonWalk",  
 )
 
 
 
 register(
-    id="Go2JumpingGround-v0",
-    entry_point="go2_env:Go2EnvMoon",  
+    id="Go2FlyingingGround-v0",
+    entry_point="go2_env:Go2EnvMoonFly",  
 )

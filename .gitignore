@@ -1,0 +1,5 @@
+*.so
+*.a
+__pycache__/
+train/__pycache__/
+train/output/
