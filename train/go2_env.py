@@ -207,15 +207,16 @@ class Go2EnvMoonFly(gym.Env):
         z = self.data.qpos[2]
         x = self.data.qpos[0]
         y = self.data.qpos[1]
-
+        vz = self.data.qvel[2]
         CRATER_RADIUS = 2
         dist_xy = np.sqrt(x**2 + y**2)
+        escaped = dist_xy > CRATER_RADIUS
 
-        if dist_xy > CRATER_RADIUS:
-            return True, "escaped"
+        if escaped and z < 0.35 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5:
+            return True, "success_landing"
 
         if abs(roll) > 0.5 or abs(pitch) > 0.5:
-            return True, "unstable_orientation"
+           return True, "unstable_orientation"
 
         if z > 3.0:
             return True, "too_high"

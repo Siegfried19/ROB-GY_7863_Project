@@ -20,7 +20,9 @@ for step in range(200000):
 
     # Gymnasium step API
     obs, reward, terminated, truncated, info = env.step(action)
-    time.sleep(0.1)
+    if terminated:
+        print(info)
+    time.sleep(0.01)
     # 渲染（你可以用自己的）
     env.render()
     # env.my_render()   # 如果你想用自己的渲染

@@ -120,59 +120,63 @@ def compute_reward_refence_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpC
     return float(reward)
     
 def compute_reward_fly(data, done, reason):
-    # ----------------------
-    # 状态信息
-    # ----------------------
-    x = data.qpos[0]
-    y = data.qpos[1]
-    z = data.qpos[2]
-    vx = data.qvel[0]
-    vy = data.qvel[1]
+    x, y, z = data.qpos[:3]
+    vx, vy, vz = data.qvel[:3]
 
-    # 姿态
-    qw, qx, qy, qz = data.qpos[3:7]
-    roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', False)
-
-    # 火箭推力（假设后4维是 jet）
-    jet_force = data.ctrl[12:16]
-
-    # 坑半径（和 heightfield 物理尺寸一致）
+    dist_xy = np.sqrt(x*x + y*y)
     CRATER_RADIUS = 2.0
-    dist_xy = np.sqrt(x**2 + y**2)
-    dist_norm = np.clip(dist_xy / CRATER_RADIUS, 0.0, 1.0)
+    escaped = dist_xy > CRATER_RADIUS
 
-    # ----------------------
-    # 1) 朝坑外的奖励
-    # ----------------------
-    w_dist = 5.0
-    r_dist = w_dist * dist_norm
+    # ------------------------
+    # A) Escape reward (outward speed)
+    # ------------------------
+    radial_speed = (x*vx + y*vy) / (dist_xy + 1e-6)
+    r_escape = 2.0 * radial_speed
 
-    # ----------------------
-    # 2) 姿态稳定惩罚
-    # ----------------------
-    w_pose = 1.0
-    r_pose = - w_pose * (abs(roll) + abs(pitch))
+    # ------------------------
+    # B) Pose stability
+    # ------------------------
+    qw, qx, qy, qz = data.qpos[3:7]
+    roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz')
+    r_pose = -1.0 * abs(pitch) - 0.5 * abs(roll)
 
-    # ----------------------
-    # 3) 推力能量惩罚
-    # ----------------------
-    w_jet = 0.0
-    r_jet = - w_jet * np.linalg.norm(jet_force, ord=2)
+    # ------------------------
+    # C) Jet energy penalty
+    # ------------------------
+    jet = data.ctrl[12:16]
+    r_jet = -0.05 * np.sum(jet * jet)
 
-    # ----------------------
-    # 4) 生存/时间奖励（可选：每步给一点点）
-    # ----------------------
-    r_alive = 0.01
+    # ------------------------
+    # D) Soft landing reward (only after escape)
+    # ------------------------
+    r_soft = 0.0
+    if escaped:
+        # 1. slow vertical speed
+        r_soft_v = -2.0 * max(0, abs(vz) - 0.5)
 
-    reward = r_dist + r_pose + r_jet + r_alive
+        # 2. height control
+        target_h = 0.3
+        r_soft_h = -3.0 * abs(z - target_h)
 
-    # ----------------------
-    # 5) 终止时额外奖励/惩罚
-    # ----------------------
+        # 3. landing stability
+        r_soft_pose = -2.0 * (abs(roll) + abs(pitch))
+
+        r_soft = r_soft_v + r_soft_h + r_soft_pose
+
+    # ------------------------
+    # E) small alive reward
+    # ------------------------
+    r_alive = 0.001
+
+    reward = r_escape + r_pose + r_jet + r_soft + r_alive
+
+    # ------------------------
+    # F) terminal bonus
+    # ------------------------
     if done:
-        if reason == "escaped":
-            reward += 100.0   # 成功逃出坑的大额奖励
+        if reason == "success_landing":
+            reward += 1500     # 高奖励，鼓励逃出+落地
         else:
-            reward -= 50.0    # 摔倒、姿态崩掉的惩罚
+            reward -= 50
 
     return reward
