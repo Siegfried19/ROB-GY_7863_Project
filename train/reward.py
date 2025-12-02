@@ -44,7 +44,7 @@ class RewardJumpCfg:
     sz: float = 0.2
     sv: float = 0.2
     sori : float = 0.2
-class RewardCfg:
+class RewardWalkCfg:
     vx_target = 1.0
     w_v, w_lat, w_ori, w_tau, w_delta, w_slip = 2.0, 0.5, 1.2, 1.0, 0.05, 0.5
     sigma_v, sigma_y, sigma_w, sigma_s = 0.3, 0.2, 0.6, 0.1
@@ -52,7 +52,7 @@ class RewardCfg:
     lam_tau, lam_delta = 0.002, 0.05
     r_done = -20.0
 
-cfg = RewardCfg()
+cfg = RewardWalkCfg()
 
 def quat_to_euler_xyz(q):  # q = [w, x, y, z]
     # 转为 (x,y,z,w) 以适配 scipy
@@ -88,7 +88,7 @@ def compute_reward_walk(data, done):
         r += cfg.r_done
     return float(r)
 
-def compute_reward_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpCfg()):
+def compute_reward_refence_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpCfg()):
     t = data.time
 
     z  = float(data.qpos[2])
@@ -119,3 +119,60 @@ def compute_reward_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpCfg()):
         reward -= 20.0
     return float(reward)
     
+def compute_reward_fly(data, done, reason):
+    # ----------------------
+    # 状态信息
+    # ----------------------
+    x = data.qpos[0]
+    y = data.qpos[1]
+    z = data.qpos[2]
+    vx = data.qvel[0]
+    vy = data.qvel[1]
+
+    # 姿态
+    qw, qx, qy, qz = data.qpos[3:7]
+    roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', False)
+
+    # 火箭推力（假设后4维是 jet）
+    jet_force = data.ctrl[12:16]
+
+    # 坑半径（和 heightfield 物理尺寸一致）
+    CRATER_RADIUS = 2.0
+    dist_xy = np.sqrt(x**2 + y**2)
+    dist_norm = np.clip(dist_xy / CRATER_RADIUS, 0.0, 1.0)
+
+    # ----------------------
+    # 1) 朝坑外的奖励
+    # ----------------------
+    w_dist = 5.0
+    r_dist = w_dist * dist_norm
+
+    # ----------------------
+    # 2) 姿态稳定惩罚
+    # ----------------------
+    w_pose = 1.0
+    r_pose = - w_pose * (abs(roll) + abs(pitch))
+
+    # ----------------------
+    # 3) 推力能量惩罚
+    # ----------------------
+    w_jet = 1.0
+    r_jet = - w_jet * np.linalg.norm(jet_force, ord=2)
+
+    # ----------------------
+    # 4) 生存/时间奖励（可选：每步给一点点）
+    # ----------------------
+    r_alive = 0.1
+
+    reward = r_dist + r_pose + r_jet + r_alive
+
+    # ----------------------
+    # 5) 终止时额外奖励/惩罚
+    # ----------------------
+    if done:
+        if reason == "escaped":
+            reward += 100.0   # 成功逃出坑的大额奖励
+        else:
+            reward -= 50.0    # 摔倒、姿态崩掉的惩罚
+
+    return reward

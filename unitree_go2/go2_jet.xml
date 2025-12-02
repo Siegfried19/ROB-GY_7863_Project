@@ -63,7 +63,7 @@
   </asset>
 
   <worldbody>
-    <body name="base" pos="-6 1 1.5" childclass="go2">
+    <body name="base" pos="0 0 0.5" childclass="go2">
     <!-- <body name="base" pos="0 0 3" childclass="go2"> -->
       <inertial pos="0.021112 0 -0.005366" quat="-0.000543471 0.713435 -0.00173769 0.700719" mass="6.921"
         diaginertia="0.107027 0.0980771 0.0244531"/>
@@ -293,7 +293,7 @@
   </keyframe> -->
   <keyframe>
   <key name="home"
-       qpos="0 0 0.27 1 0 0 0   0 0.8 -1.5   0 0.8 -1.5   0 0.8 -1.5   0 0.8 -1.5"
-       ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0 0 0"/>
+       qpos="0 0 0.27 1 0 0 0   0 0.9 -1.57   0 0.9 -1.57   0 0.9 -1.57   0 0.9 -1.57"
+       ctrl="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/>
   </keyframe>
 </mujoco>

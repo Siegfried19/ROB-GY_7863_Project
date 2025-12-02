@@ -1,11 +1,13 @@
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import mujoco
 import numpy as np
 import mujoco.viewer
 from reward import compute_reward_walk,compute_reward_fly
 from scipy.spatial.transform import Rotation as R  
 from get_ref_action import get_ref_torque
+
+
 class Go2EnvMoonWalk(gym.Env):
     def __init__(self, xml_path="../unitree_go2/scene_moon.xml"):
         super().__init__()
@@ -19,11 +21,18 @@ class Go2EnvMoonWalk(gym.Env):
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.num_actions,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
 
-    def reset(self):
+    def reset(self, *, seed=None, options=None):
+    # 必写
+        super().reset(seed=seed)
+
+        # Reset mujoco
         mujoco.mj_resetData(self.model, self.data)
 
         obs = self.get_observations()
-        return obs
+        info = {}
+
+        return obs, info
+
     
     def step(self, action):
         self.ref_angle, self.ref_ctrl = get_ref_torque(self.model,self.data)
@@ -85,7 +94,7 @@ class Go2EnvMoonWalk(gym.Env):
 
         return False, None
 
-    def my_render(self):
+    def render(self):
         if self.viewer is None:
             self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
         self.viewer.sync()
@@ -105,12 +114,17 @@ class Go2EnvMoonFly(gym.Env):
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.num_actions,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
 
-    def reset(self):
+    def reset(self, *, seed=None, options=None):
+    # 必写
+        super().reset(seed=seed)
+
+        # Reset mujoco
         mujoco.mj_resetData(self.model, self.data)
-        self.data.qpos[:3] = np.array([0, 0, 1])
+
         obs = self.get_observations()
-        return obs
-    
+        info = {}
+
+        return obs, info
     def step(self, action):
         action = np.clip(action, -1, 1)
 
@@ -150,7 +164,7 @@ class Go2EnvMoonFly(gym.Env):
         # 3. 合并 ctrl
         # ----------------------------------------------------
         self.data.ctrl[:12] = joint_torque
-        self.data.ctrl[12:16] = jet_force
+        self.data.ctrl[12:16] = 0# jet_force
 
         # 执行仿真
         mujoco.mj_step(self.model, self.data)
@@ -160,10 +174,14 @@ class Go2EnvMoonFly(gym.Env):
         # ----------------------------------------------------
         obs = self.get_observations()
         reward = self._get_reward(obs)
-        done = self._check_done(obs)
+        terminated, reason = self._check_done(obs)
+        truncated = False  # 你暂时还没有时间截断机制
 
-        return obs, reward, done, {}
+        info = {"termination_reason": reason}
 
+        return obs, reward, terminated, truncated, info
+
+       
     def get_observations(self):
         # 示例：返回位置 + 速度
         obs = np.concatenate([
@@ -174,21 +192,40 @@ class Go2EnvMoonFly(gym.Env):
         self.data.sensor('imu_gyro').data,
         self.data.sensor('imu_acc').data,
         ])
-
-        return obs 
+      
+        return obs.astype(np.float32)
     
     def _get_reward(self,obs):
-        done = self._check_done(obs)
-        reward = compute_reward_fly(self.data, done)
+        done,info = self._check_done(obs)
+        reward = compute_reward_fly(self.data, done, info)
         return reward
 
     def _check_done(self, obs):
-        # 如果狗倒地
-        if self.data.qpos[2] < 0.2:
-            return True
-        return False
+        qw, qx, qy, qz = self.data.qpos[3:7]
+        roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', degrees=False)
 
-    def my_render(self):
+        z = self.data.qpos[2]
+        x = self.data.qpos[0]
+        y = self.data.qpos[1]
+
+        CRATER_RADIUS = 2
+        dist_xy = np.sqrt(x**2 + y**2)
+
+        if dist_xy > CRATER_RADIUS:
+            return True, "escaped"
+
+        if abs(roll) > 0.7 or abs(pitch) > 1.0:
+            return True, "unstable_orientation"
+
+        if z > 3.0:
+            return True, "too_high"
+
+        if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():
+            return True, "nan_error"
+
+        return False, None
+
+    def render(self):
         if self.viewer is None:
             self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
         self.viewer.sync()
