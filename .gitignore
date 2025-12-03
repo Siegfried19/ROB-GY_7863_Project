@@ -4,3 +4,4 @@ __pycache__/
 train/__pycache__/
 train/output/
 train/wandb/
+*.png

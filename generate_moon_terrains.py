@@ -24,10 +24,27 @@ def generate_random_moon_png(crater_size=0.5, crater_depth=0.08, size=512, crate
     img.save("unitree_go2/assets/moon_height.png")
     print(f"Saved moon_height.png, shape={Z.shape}, "
           f"crater_size={crater_size}, crater_depth={crater_depth}")
+    
+def generate_single_moon_png(crater_size=0.5, crater_depth=1, size=512, crater_steepness=3, seed=42):
+    Z = np.zeros((size, size), dtype=np.float32)
+    X, Y = np.ogrid[:size, :size]
 
-# 示例使用：
-# 小而深的坑
-generate_random_moon_png(crater_size=0.5, crater_depth=0.02)
+    cx, cy = size // 2, size // 2
+    r = int(size * crater_size)/crater_steepness
+    crater = np.exp(-((X - cx)**2 + (Y - cy)**2) / (2 * r**2))
+    Z -= crater 
 
-# 大而浅的坑
-# generate_moon_png(crater_size=0.6, crater_depth=0.01)
+    # 归一化到 [0,1]
+    Z -= Z.min()
+    Z /= (Z.max() + 1e-8)
+    Z *= crater_depth
+
+    # 转成灰度图
+    img = Image.fromarray((Z * 255).astype(np.uint8))
+    img.save("unitree_go2/assets/moon_height.png")
+    print(f"Saved moon_height.png, shape={Z.shape}, "
+          f"crater_size={crater_size}, crater_depth={crater_depth}")
+
+
+# generate_random_moon_png(crater_size=0.5, crater_depth=0.02)
+generate_single_moon_png(crater_size=0.5, crater_depth=1, crater_steepness=10)

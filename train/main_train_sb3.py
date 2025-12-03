@@ -16,6 +16,7 @@ from go2_env import Go2EnvMoonFly
 import wandb  
 import register_envs
 from stable_baselines3.common.monitor import Monitor
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--env_name', type=str, default="Go2FlyingingGround-v0",
                     help='save path')
@@ -27,17 +28,12 @@ parser.add_argument('--resume_iter', type=str, default='max',
                     help='iteration to resume training')
 args = parser.parse_args()
 
-
-
-
 def make_env():
     def _init():
         env = gym.make(args.env_name)
         env = Monitor(env)           # <<< 必须加！
         return env
     return _init
-
-
 
 def main():
     wandb.init(
@@ -46,10 +42,8 @@ def main():
         sync_tensorboard=True,
     )
 
-
     NUM_ENVS = 8# 并行环境数量，可根据 CPU 调整
     vec_env = SubprocVecEnv([make_env() for _ in range(NUM_ENVS)])
-
 
     # ----------------------------
     # 5. Configure PPO model
