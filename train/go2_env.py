@@ -101,6 +101,8 @@ class Go2EnvMoonWalk(gym.Env):
 
     def get_ref(self):
         return self.ref_angle, self.ref_ctrl
+
+
 class Go2EnvMoonFly(gym.Env):
     def __init__(self, xml_path="../unitree_go2/scene_moon_jet.xml"):
         super().__init__()
