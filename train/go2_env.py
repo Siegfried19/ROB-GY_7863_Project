@@ -107,7 +107,7 @@ class Go2EnvMoonFly(gym.Env):
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.data = mujoco.MjData(self.model)
         self.num_actions = self.model.nu    # 动作数
-        self.num_obs = 46               # 可自由定义观测维度
+        self.num_obs = 33              # 可自由定义观测维度
         self.viewer = None
   
         # 定义 action/observation 空间
@@ -158,7 +158,9 @@ class Go2EnvMoonFly(gym.Env):
 
         jet_norm = (jet_action + 1) / 2.0    # [-1,1] → [0,1]
         jet_force = jet_norm * jet_max
-
+        # print("action",action)
+        # print("joint_torque",joint_torque)
+        # print("jet_force",jet_force)
 
         # ----------------------------------------------------
         # 3. 合并 ctrl
@@ -175,7 +177,7 @@ class Go2EnvMoonFly(gym.Env):
         obs = self.get_observations()
         reward = self._get_reward(obs)
         terminated, reason = self._check_done(obs)
-        truncated = False  # 你暂时还没有时间截断机制
+        truncated = False  # 暂时还没有时间截断机制
 
         info = {"termination_reason": reason}
 
@@ -183,17 +185,57 @@ class Go2EnvMoonFly(gym.Env):
 
        
     def get_observations(self):
-        # 示例：返回位置 + 速度
+        data = self.data
+
+        # Base pos & orientation
+        x, y, z = data.qpos[:3]
+        qw, qx, qy, qz = data.qpos[3:7]
+
+        # Base velocity
+        vx, vy, vz = data.qvel[:3]
+        wx, wy, wz = data.qvel[3:6]
+
+        # # Task info
+        # dist_xy = np.sqrt(x*x + y*y)
+        # radial_dir_x = x / (dist_xy + 1e-6)
+        # radial_dir_y = y / (dist_xy + 1e-6)
+   
+
+        # --- Leg joint states (hip only) ---
+        # Go2: 12 joints, order depends on your XML
+        # Example: qpos[7:19] contains 12 joint angles
+        joint_angles = data.qpos[7:19]         # length=12
+        joint_vel    = data.qvel[6:18]         # length=12
+
+        # Select hip joints only (0,1 for each leg) → total 8 dims
+        hip_idx = [0,1, 3,4, 6,7, 9,10]         # adjust index mapping accordingly
+        hip_angles = joint_angles[hip_idx]
+        hip_vels   = joint_vel[hip_idx]
+
+        # Last action (for smooth control)
+        last_action = data.actuator_force[12:]
         obs = np.concatenate([
-        self.data.qpos[7:],    # 跳过 base 自由度的 7 (xyz + quat)
-        self.data.qvel[6:],    # 跳过 base 线+角速度
-        self.data.actuator_force[:12],
-        self.data.sensor('imu_quat').data,
-        self.data.sensor('imu_gyro').data,
-        self.data.sensor('imu_acc').data,
+            np.array([
+                x, y, z,
+                qw, qx, qy, qz,
+                vx, vy, vz,
+                wx, wy, wz,
+            ], dtype=np.float32),
+
+            hip_angles.astype(np.float32),
+            hip_vels.astype(np.float32),
+            last_action
         ])
-      
+
         return obs.astype(np.float32)
+
+        # print("=====obvervation state shape==========")
+        # print(self.data.qpos[7:].shape)
+        # print(self.data.qvel[6:].shape)    # 跳过 base 线+角速度
+        # print(self.data.actuator_force.shape)
+        # print(self.data.sensor('imu_quat').data.shape)
+        # print(self.data.sensor('imu_gyro').data.shape)
+        # print(self.data.sensor('imu_acc').data.shape)
     
     def _get_reward(self,obs):
         done,info = self._check_done(obs)
@@ -203,7 +245,7 @@ class Go2EnvMoonFly(gym.Env):
     def _check_done(self, obs):
         qw, qx, qy, qz = self.data.qpos[3:7]
         roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', degrees=False)
-
+   
         z = self.data.qpos[2]
         x = self.data.qpos[0]
         y = self.data.qpos[1]
@@ -216,10 +258,10 @@ class Go2EnvMoonFly(gym.Env):
         if escaped and z < 0.35 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
             return True, "success_landing"
 
-        if abs(roll) > 0.7 or abs(pitch) > 0.9:
+        if abs(roll) > 0.7 or abs(pitch) > 0.7 or abs(yaw) > 0.5:
            return True, "unstable_orientation"
 
-        if z > 3.0:
+        if z > 2.0:
             return True, "too_high"
 
         if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():

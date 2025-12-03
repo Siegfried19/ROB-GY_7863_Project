@@ -130,8 +130,9 @@ def compute_reward_fly(data, done, reason):
     # ------------------------
     # A) Escape reward (outward speed)
     # ------------------------
-    radial_speed = (x*vx + y*vy) / (dist_xy + 1e-6)
-    r_escape = 2.0 * radial_speed
+     # 只奖励向前的速度，向后不给分
+    v_forward = max(vx, 0.0)
+    r_forward = 2.0 * v_forward
 
     # ------------------------
     # B) Pose stability
@@ -139,12 +140,14 @@ def compute_reward_fly(data, done, reason):
     qw, qx, qy, qz = data.qpos[3:7]
     roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz')
     r_pose = -1.0 * abs(pitch) - 0.5 * abs(roll)
-
+    r_y = -1.0 * abs(y)
+    r_yaw = 1.0 * np.cos(yaw)    # yaw=0 → +1，偏离变小
+    r_pose = r_pose + r_y + r_yaw
     # ------------------------
     # C) Jet energy penalty
     # ------------------------
     jet = data.ctrl[12:16]
-    r_jet = -0.05 * np.sum(jet * jet)
+    r_jet = -0.0 * np.sum(jet * jet)
 
     # ------------------------
     # D) Soft landing reward (only after escape)
@@ -166,9 +169,9 @@ def compute_reward_fly(data, done, reason):
     # ------------------------
     # E) small alive reward
     # ------------------------
-    r_alive = 0.001
+    r_alive = 0.01
 
-    reward = r_escape + r_pose + r_jet + r_soft + r_alive
+    reward = r_forward + r_pose + r_jet + r_soft + r_alive
 
     # ------------------------
     # F) terminal bonus
@@ -177,6 +180,6 @@ def compute_reward_fly(data, done, reason):
         if reason == "success_landing":
             reward += 1500     # 高奖励，鼓励逃出+落地
         else:
-            reward -= 50
+            reward -= 1000
 
     return reward
