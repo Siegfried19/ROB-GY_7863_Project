@@ -67,11 +67,16 @@ def stand_still(model_path=os.path.join("unitree_go2", "scene_moon_jet.xml")):
     }
     
     # Initialize model state close to target pose
-    mujoco.mj_resetData(model, data)
-    for leg in LEG:
-        data.qpos[model.jnt_qposadr[hip_jid[leg]]] = 0.5
-        data.qpos[model.jnt_qposadr[thigh_jid[leg]]] = 1.2
-        data.qpos[model.jnt_qposadr[calf_jid[leg]]] = -1.27
+    key_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_KEY, "home")
+    if key_id == -1:
+        raise RuntimeError("找不到名为 'home' 的 keyframe，请检查 XML")
+    mujoco.mj_resetDataKeyframe(model, data, key_id)
+    
+    # mujoco.mj_resetData(model, data)
+    # for leg in LEG:
+    #     data.qpos[model.jnt_qposadr[hip_jid[leg]]] = 0.5
+    #     data.qpos[model.jnt_qposadr[thigh_jid[leg]]] = 1.2
+    #     data.qpos[model.jnt_qposadr[calf_jid[leg]]] = -1.27
     
     mujoco.mj_forward(model, data)
     print("开启仿真窗口：保持站立（按下关闭按钮结束）")
