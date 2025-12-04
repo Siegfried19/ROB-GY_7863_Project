@@ -23,8 +23,8 @@ parser.add_argument('--save_path', type=str, default="output/sb3_fly",
                     help='save path')
 parser.add_argument('--resume', type=bool, default=False,
                     help='whether to resume training')
-parser.add_argument('--resume_path', type=str, default='max',
-                    help='iteration to resume training')
+parser.add_argument('--resume_path', type=str, default="./output/sb3_fly/sb3_fly_but_cannot_landing.zip",
+                    help='path to resume training')
 args = parser.parse_args()
 
 
@@ -42,7 +42,7 @@ def make_env():
 def main():
     wandb.init(
         project="Go2Moon_SB3",
-        name="flying",
+        name="jumping",
         sync_tensorboard=True,
     )
 
@@ -56,8 +56,9 @@ def main():
     # 5. Configure PPO model
     # ----------------------------
     if args.resume:
-        print('resume training from output/sb3_fly/sb3_fly_final.zip')
-        model = PPO.load("output/sb3_fly/sb3_fly_final.zip", device="cuda")
+        print("resume training from:", args.resume_path)
+      
+        model = PPO.load(args.resume_path, device="cuda")
         model.set_env(vec_env)
 
 

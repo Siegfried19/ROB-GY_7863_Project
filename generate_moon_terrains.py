@@ -80,8 +80,8 @@ def generate_crater_at_origin(
 
 #在原点位置
 generate_crater_at_origin(
-    radius_m=2.0,
-    depth_m=1.0,
+    radius_m=0.0,
+    depth_m=0.0,
     size=512,
     world_size_m=10.0
 )

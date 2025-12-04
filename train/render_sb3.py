@@ -7,7 +7,7 @@ import register_envs
 
 # 加载模型（zip 文件）
 # model = PPO.load("./output/sb3_fly/finishied/sb3_fly_but_cannot_landing.zip", device="cpu")
-model = PPO.load("./output/sb3_fly/sb3_fly_500000_steps.zip", device="cpu")
+model = PPO.load("./output/sb3_fly/sb3_fly_4000000_steps.zip", device="cpu")
 # 创建环境
 env = gym.make("Go2FlyingingGround-v0")
 

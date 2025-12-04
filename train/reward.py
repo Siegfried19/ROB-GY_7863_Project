@@ -5,10 +5,10 @@ from dataclasses import dataclass
 
 @dataclass
 class LunarJumpCfg:
-    z0: float = 0.95          # 站立高度
-    g: float = 1.62            # 月球重力
-    h_peak: float = 3.0        # 抬升高度
-    L: float = 5.0             # 水平跨越距离
+    z0: float = 0.5          # 站立高度
+    g: float = 3.71          # 月球重力
+    h_peak: float = 1.0        # 抬升高度
+    L: float = 3.0             # 水平跨越距离
     T_buffer: float = 0.4      # 着地后缓冲时间（可选）
 
 class LunarJumpRef:
@@ -22,16 +22,17 @@ class LunarJumpRef:
     def ref(self, t):
         c = self.cfg
         if t <= self.T:
-            x = self.v0x * t-4
+            x = self.v0x * t
             z = c.z0 + self.v0z*t - 0.5*c.g*t*t
             vx = self.v0x
             vz = self.v0z - c.g*t
         else:
             # 简单缓冲：靠近地面期望（也可做 quintic）
-            x = self.v0x * self.T  # 水平到 5m 后保持
+          
             z = c.z0
-            vx = 0.0               # 着地后期望停下（如需继续跑可改为 vx_ref=目标速度）
+            vx = 1.0               # 着地后期望停下（如需继续跑可改为 vx_ref=目标速度）
             vz = 0.0
+            x = self.v0x * self.T +vx*(t - self.T) # 水平到 3m 后保持
         return x, z, vx, vz
     
 @dataclass
@@ -41,8 +42,8 @@ class RewardJumpCfg:
     w_ori: float = 1.2
     w_land: float = 2.0
     lam_tau: float = 1e-3
-    sz: float = 0.2
-    sv: float = 0.2
+    sz: float = 0.5
+    sv: float = 0.5
     sori : float = 0.2
 class RewardWalkCfg:
     vx_target = 1.0
@@ -88,7 +89,7 @@ def compute_reward_walk(data, done):
         r += cfg.r_done
     return float(r)
 
-def compute_reward_refence_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpCfg()):
+def compute_reward_refence_fly(data, done, reason, ref = LunarJumpRef(), rw= RewardJumpCfg()):
     t = data.time
 
     z  = float(data.qpos[2])
@@ -96,27 +97,31 @@ def compute_reward_refence_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpC
     vx = float(data.qvel[0])
     vz = float(data.qvel[2])
     qw, qx, qy, qz = data.qpos[3:7]
-    roll, pitch, _ = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', False)
+    roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', False)
   
     x_ref, z_ref, vx_ref, vz_ref = ref.ref(t)
  
     # 误差（仅用 z/v 跟踪；如需更严格也可加入 x 跟踪项）
     rz = np.exp(-(((z - z_ref)**2)+(x-x_ref)**2) / (rw.sz**2))
-    rv = np.exp(-(((vx - vx_ref)**2 + (vz - vz_ref)**2)) / (rw.sv**2))
-    rori = np.exp(-(roll**2 + pitch**2)/ (rw.sori**2))
-
+    rv = - 0.5 * ( (vx - vx_ref)**2 + (vz - vz_ref)**2 )
+    rori = np.exp(-(roll**2 + pitch**2)/ (rw.sori**2))+1.0 * np.cos(yaw) 
+    # print("ref",x_ref, z_ref, vx_ref, vz_ref )
+    # print("robot",x,z,vx,vz)
+    # print("reward", rz,rv)
     # 靠近地面时鼓励小竖直速度（软着陆）
-    near_ground = (ref.cfg.z0 - 0.03) < z < (ref.cfg.z0 + 0.03)
+    near_ground = (ref.cfg.z0 - 0.3) < z < (ref.cfg.z0 + 0.3)
     rland = np.exp(-abs(vz)) if near_ground else 0.0
 
     # 能耗惩罚
     tau = np.abs(np.array(data.actuator_force[12:], dtype=float)).sum()
     r_tau = -rw.lam_tau * tau
     #print(rz,rv,rori,r_tau)
-   
-    reward = rw.w_z*rz + rw.w_v*rv + rw.w_ori*rori #+  r_tau+ rw.w_land*rland 
+    r_alive = 0.001
+    reward = rw.w_z*rz + rw.w_v*rv + rw.w_ori*rori + r_tau+ rw.w_land*rland +r_alive
+    
+ 
     if done:
-        reward -= 20.0
+        reward -= 500
     return float(reward)
     
 def compute_reward_fly(data, done, reason):
@@ -130,8 +135,17 @@ def compute_reward_fly(data, done, reason):
     # ------------------------
     # A) Escape reward (outward speed)
     # ------------------------
-    r_forward = 1.0 * vx
+    # 逃出坑奖励
+    r_escape = 2.0 * dist_xy
 
+    # 接近坑边时的减速权重
+    w_edge = np.clip((dist_xy - CRATER_RADIUS*0.5) / (CRATER_RADIUS*0.5), 0, 1)
+
+    # 奖励：在坑中央不减速；接近坑边时速度越小越好
+    r_slow_x = w_edge * -abs(vx) 
+    r_slow_z = w_edge * -abs(vz)
+
+    r_flight = r_escape + r_slow_x + r_slow_z
     # ------------------------
     # B) Pose stability
     # ------------------------
@@ -145,33 +159,57 @@ def compute_reward_fly(data, done, reason):
     # C) Jet energy penalty
     # ------------------------
     jet = data.ctrl[12:16]
-    r_jet = -0.0 * np.sum(jet * jet)
+    r_jet = -1.0* np.mean(jet)/50
 
     # ------------------------
     # D) Soft landing reward (only after escape)
     # ------------------------
     r_soft = 0.0
     if escaped:
-        r_forward = 0
+        r_flight = 0
         target_h = 0.3
 
-        # 垂直速度（只在接近地面时强惩罚）
-        w = np.clip((0.5 - z) / 0.5, 0, 1)
-        p_vz =  0.5 * w * abs(vz)
+        # ----------------------------
+        # 1) 垂直速度奖励：落地时越接近 0 越好
+        # ----------------------------
 
-        # 水平速度
-        p_hvel = 0.5 * (abs(vx) + abs(vy))
-
-        # 姿态
-        p_pose = 2.0 * (abs(roll) + abs(pitch))
-
-        # 高度偏差
-        p_height = 0.5 * abs(z - target_h)
-
-        # 总惩罚（越接近目标 → 越少惩罚）
-        r_soft = -(p_vz + p_hvel + p_pose + p_height)
-        print(r_soft)
      
+        if z > target_h+0.5: #
+            r_descend = np.clip(-vz, -2.0, 3.0)   # vz<0 才有奖励
+        else:
+            r_descend =   np.exp(-3.0 * abs(vz))
+
+        # ----------------------------
+        # 2) 水平速度奖励：越慢越奖励
+        # ----------------------------
+        r_hvel = np.exp(-(abs(vx) + abs(vy)))
+
+        # ----------------------------
+        # 3) 姿态奖励：roll pitch 越接近 0 越好
+        # ----------------------------
+        r_pose = np.exp(-2.0 * (abs(roll) + abs(pitch)))
+
+        # ----------------------------
+        # 4) 高度奖励：落地高度越接近 target_h 越好
+        # ----------------------------
+        r_height = np.exp(-5.0 * abs(z - target_h))
+
+        # ----------------------------
+        # 总落地奖励（全正）
+        # ----------------------------
+        r_soft = (
+            1.0 * r_descend +
+            1.0 * r_hvel +
+            1.0 * r_pose +
+            1.0 * r_height
+        )
+
+        # print("===============")
+        # print("landing reward:", r_soft)
+        # print("postion",x,y,z)
+        # print("vz reward:", r_descend, "hvel reward:", r_hvel)
+        # print("pose reward:", r_pose, "height reward:", r_height)
+
 
     # ------------------------
     # E) small alive reward
@@ -179,8 +217,10 @@ def compute_reward_fly(data, done, reason):
     r_alive = 0.001
     # print("r_forward",r_forward)
     # print("r_pose",r_pose)
-    reward = r_forward + r_pose + r_jet + r_soft + r_alive
-
+    if escaped:
+        reward = r_jet + r_soft + r_alive
+    else:
+        reward = r_flight + r_pose + r_jet + r_soft + r_alive
     # ------------------------
     # F) terminal bonus
     # ------------------------

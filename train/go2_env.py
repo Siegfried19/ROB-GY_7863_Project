@@ -3,7 +3,7 @@ from gymnasium import spaces
 import mujoco
 import numpy as np
 import mujoco.viewer
-from reward import compute_reward_walk,compute_reward_fly
+from reward import compute_reward_walk,compute_reward_fly,compute_reward_refence_fly
 from scipy.spatial.transform import Rotation as R  
 from get_ref_action import get_ref_torque
 
@@ -20,6 +20,7 @@ class Go2EnvMoonWalk(gym.Env):
         # 定义 action/observation 空间
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.num_actions,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
+
 
     def reset(self, *, seed=None, options=None):
     # 必写
@@ -114,7 +115,7 @@ class Go2EnvMoonFly(gym.Env):
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.num_actions,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
         self.key_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_KEY, "init")
-
+        self.is_land = False
     def reset(self, *, seed=None, options=None):
     # 必写
         super().reset(seed=seed)
@@ -124,7 +125,7 @@ class Go2EnvMoonFly(gym.Env):
 
         # 通常再 forward 一下保证所有派生量（矩阵、接触等）更新
         mujoco.mj_forward(self.model, self.data)
-
+        self.is_land = False
 
         obs = self.get_observations()
         info = {}
@@ -162,7 +163,14 @@ class Go2EnvMoonFly(gym.Env):
         # ----------------------------------------------------
         jet_action = action[12:]
         jet_max = self.model.actuator_ctrlrange[12:, 1]
+        z = self.data.qpos[2]
 
+        # 例如超过 0.7m 之后禁止继续喷火
+        if z > 0.7:
+            jet_max = jet_max*0.1      
+
+        if  self.is_land:
+            jet_max =0
         jet_norm = (jet_action + 1) / 2.0    # [-1,1] → [0,1]
         jet_force = jet_norm * jet_max
         # print("action",action)
@@ -247,7 +255,7 @@ class Go2EnvMoonFly(gym.Env):
     
     def _get_reward(self,obs):
         done,info = self._check_done(obs)
-        reward = compute_reward_fly(self.data, done, info)
+        reward = compute_reward_refence_fly(self.data, done,info)
         return reward
 
     def _check_done(self, obs):
@@ -258,18 +266,23 @@ class Go2EnvMoonFly(gym.Env):
         x = self.data.qpos[0]
         y = self.data.qpos[1]
         vz = self.data.qvel[2]
-        CRATER_RADIUS = 2
-        dist_xy = np.sqrt(x**2 + y**2)
-        escaped = dist_xy > CRATER_RADIUS
+        # CRATER_RADIUS = 2
+        # dist_xy = np.sqrt(x**2 + y**2)
+        # escaped = dist_xy > CRATER_RADIUS
    
 
-        if escaped and z < 0.5 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
-            return True, "success_landing"
-
+        # if escaped and z < 0.5 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
+        #     return True, "success_landing"
+    
+        if 3.2> x > 2.8 and 0.4< z < 0.6 and abs(roll) < 0.5 and abs(pitch) < 0.5 and abs(yaw) < 0.5 :
+           print("landing!!!!!!!!!!")
+           self.is_land = True
+           return False, "landing"
+    
         if abs(roll) > 0.7 or abs(pitch) > 0.9 or abs(yaw) > 0.5:
            return True, "unstable_orientation"
 
-        if z > 5.0:
+        if z > 2.0:
             return True, "too_high"
 
         if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():
