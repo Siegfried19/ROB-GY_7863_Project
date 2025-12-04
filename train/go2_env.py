@@ -276,11 +276,15 @@ class Go2EnvMoonFly(gym.Env):
         # 4. 返回
         # ----------------------------------------------------
         obs = self.get_observations()
-        reward = self._get_reward(obs)
+        reward, r_escape, r_pose, r_jet, r_soft = self._get_reward(obs)
         terminated, reason = self._check_done(obs)
         truncated = False  # 你暂时还没有时间截断机制
 
-        info = {"termination_reason": reason}
+        info = {"termination_reason": reason,
+                "r_escape": r_escape,
+                "r_pose": r_pose,
+                "r_jet": r_jet,
+                "r_soft": r_soft}
 
         return obs, reward, terminated, truncated, info
 
@@ -367,8 +371,8 @@ class Go2EnvMoonFly(gym.Env):
     
     def _get_reward(self,obs):
         done,info = self._check_done(obs)
-        reward = compute_reward_fly(self.data, done, info, self.crater_config)
-        return reward
+        reward, r_escape, r_pose, r_jet, r_soft = compute_reward_fly(self.data, done, info, self.crater_config)
+        return reward, r_escape, r_pose, r_jet, r_soft
 
     def _check_done(self, obs):
         qw, qx, qy, qz = self.data.qpos[3:7]

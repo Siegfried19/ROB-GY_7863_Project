@@ -131,7 +131,7 @@ def compute_reward_fly(data, done, reason, crater_config):
     # A) Escape reward (outward speed)
     # ------------------------
     radial_speed = (x*vx + y*vy) / (crater_radius + 1e-6)
-    r_escape = 2.0 * radial_speed
+    r_escape = 10.0 * radial_speed
 
     # ------------------------
     # B) Pose stability
@@ -178,5 +178,81 @@ def compute_reward_fly(data, done, reason, crater_config):
             reward += 1500     # 高奖励，鼓励逃出+落地
         else:
             reward -= 50
+
+    return reward, r_escape, r_pose, r_jet, r_soft
+
+def compute_reward_fly2(data, done, reason):
+    x, y, z = data.qpos[:3]
+    vx, vy, vz = data.qvel[:3]
+
+    dist_xy = np.sqrt(x*x + y*y)
+    CRATER_RADIUS = 2.0
+    escaped = dist_xy > CRATER_RADIUS
+
+    # ------------------------
+    # A) Escape reward (outward speed)
+    # ------------------------
+    r_forward = 1.0 * vx
+
+    # ------------------------
+    # B) Pose stability
+    # ------------------------
+    qw, qx, qy, qz = data.qpos[3:7]
+    roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz')
+    r_pose = -2.0 * (abs(pitch) + abs(roll))
+    r_y = -1.0 * abs(y)
+    r_yaw = 1.0 * np.cos(yaw)    # yaw=0 → +1，偏离变小
+    r_pose = r_pose + r_y + r_yaw
+    # ------------------------
+    # C) Jet energy penalty
+    # ------------------------
+    jet = data.ctrl[12:16]
+    r_jet = -0.0 * np.sum(jet * jet)
+
+    # ------------------------
+    # D) Soft landing reward (only after escape)
+    # ------------------------
+    r_soft = 0.0
+    if escaped:
+        r_forward = 0
+        target_h = 0.3
+
+        # 垂直速度（只在接近地面时强惩罚）
+        w = np.clip((0.5 - z) / 0.5, 0, 1)
+        p_vz =  0.5 * w * abs(vz)
+
+        # 水平速度
+        p_hvel = 0.5 * (abs(vx) + abs(vy))
+
+        # 姿态
+        p_pose = 2.0 * (abs(roll) + abs(pitch))
+
+        # 高度偏差
+        p_height = 0.5 * abs(z - target_h)
+
+        # 总惩罚（越接近目标 → 越少惩罚）
+        r_soft = -(p_vz + p_hvel + p_pose + p_height)
+        print(r_soft)
+     
+
+    # ------------------------
+    # E) small alive reward
+    # ------------------------
+    r_alive = 0.001
+    # print("r_forward",r_forward)
+    # print("r_pose",r_pose)
+    reward = r_forward + r_pose + r_jet + r_soft + r_alive
+
+    # ------------------------
+    # F) terminal bonus
+    # ------------------------
+    if done:
+        if escaped:
+            reward += 500
+        if reason == "success_landing":
+            reward += 1500     # 高奖励，鼓励逃出+落地
+            print("landing!!!!!!!!!")   
+        else:
+            reward -= 1000
 
     return reward
