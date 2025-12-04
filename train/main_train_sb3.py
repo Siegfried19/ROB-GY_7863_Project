@@ -23,7 +23,7 @@ parser.add_argument('--save_path', type=str, default="output/sb3_fly",
                     help='save path')
 parser.add_argument('--resume', type=bool, default=False,
                     help='whether to resume training')
-parser.add_argument('--resume_iter', type=str, default='max',
+parser.add_argument('--resume_path', type=str, default='max',
                     help='iteration to resume training')
 args = parser.parse_args()
 
@@ -47,6 +47,7 @@ def main():
     )
 
 
+
     NUM_ENVS = 8# 并行环境数量，可根据 CPU 调整
     vec_env = SubprocVecEnv([make_env() for _ in range(NUM_ENVS)])
 
@@ -54,20 +55,27 @@ def main():
     # ----------------------------
     # 5. Configure PPO model
     # ----------------------------
-    model = PPO(
-        policy="MlpPolicy",
-        env=vec_env,
-        verbose=1,
-        device="cuda",              # 使用 GPU
-        n_steps=2048,               # 每次 rollout 步数（越大训练越稳定）
-        batch_size=256,
-        n_epochs=10,
-        learning_rate=3e-4,
-        gamma=0.99,
-        gae_lambda=0.95,
-        ent_coef=0.01,
-        tensorboard_log = args.save_path+"/logs",
-    )
+    if args.resume:
+        print('resume training from output/sb3_fly/sb3_fly_final.zip')
+        model = PPO.load("output/sb3_fly/sb3_fly_final.zip", device="cuda")
+        model.set_env(vec_env)
+
+
+    else:
+        model = PPO(
+            policy="MlpPolicy",
+            env=vec_env,
+            verbose=1,
+            device="cuda",              # 使用 GPU
+            n_steps=2048,               # 每次 rollout 步数（越大训练越稳定）
+            batch_size=256,
+            n_epochs=10,
+            learning_rate=3e-4,
+            gamma=0.99,
+            gae_lambda=0.95,
+            ent_coef=0.01,
+            tensorboard_log = args.save_path+"/logs",
+        )
 
 
     checkpoint_cb = EveryNTimesteps(
@@ -90,7 +98,7 @@ def main():
 
 
     model.learn(
-        total_timesteps=20_000_000,           # 训练 200 万步
+        total_timesteps=40_000_000,           # 训练 200 万步
         callback=callback_list,
     )
 

@@ -130,16 +130,14 @@ def compute_reward_fly(data, done, reason):
     # ------------------------
     # A) Escape reward (outward speed)
     # ------------------------
-     # 只奖励向前的速度，向后不给分
-    v_forward = max(vx, 0.0)
-    r_forward = 2.0 * v_forward
+    r_forward = 1.0 * vx
 
     # ------------------------
     # B) Pose stability
     # ------------------------
     qw, qx, qy, qz = data.qpos[3:7]
     roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz')
-    r_pose = -1.0 * abs(pitch) - 0.5 * abs(roll)
+    r_pose = -2.0 * (abs(pitch) + abs(roll))
     r_y = -1.0 * abs(y)
     r_yaw = 1.0 * np.cos(yaw)    # yaw=0 → +1，偏离变小
     r_pose = r_pose + r_y + r_yaw
@@ -154,31 +152,44 @@ def compute_reward_fly(data, done, reason):
     # ------------------------
     r_soft = 0.0
     if escaped:
-        # 1. slow vertical speed
-        r_soft_v = -2.0 * max(0, abs(vz) - 0.5)
-
-        # 2. height control
+        r_forward = 0
         target_h = 0.3
-        r_soft_h = -3.0 * abs(z - target_h)
 
-        # 3. landing stability
-        r_soft_pose = -2.0 * (abs(roll) + abs(pitch))
+        # 垂直速度（只在接近地面时强惩罚）
+        w = np.clip((0.5 - z) / 0.5, 0, 1)
+        p_vz =  0.5 * w * abs(vz)
 
-        r_soft = r_soft_v + r_soft_h + r_soft_pose
+        # 水平速度
+        p_hvel = 0.5 * (abs(vx) + abs(vy))
+
+        # 姿态
+        p_pose = 2.0 * (abs(roll) + abs(pitch))
+
+        # 高度偏差
+        p_height = 0.5 * abs(z - target_h)
+
+        # 总惩罚（越接近目标 → 越少惩罚）
+        r_soft = -(p_vz + p_hvel + p_pose + p_height)
+        print(r_soft)
+     
 
     # ------------------------
     # E) small alive reward
     # ------------------------
-    r_alive = 0.01
-
+    r_alive = 0.001
+    # print("r_forward",r_forward)
+    # print("r_pose",r_pose)
     reward = r_forward + r_pose + r_jet + r_soft + r_alive
 
     # ------------------------
     # F) terminal bonus
     # ------------------------
     if done:
+        if escaped:
+            reward += 500
         if reason == "success_landing":
             reward += 1500     # 高奖励，鼓励逃出+落地
+            print("landing!!!!!!!!!")   
         else:
             reward -= 1000
 

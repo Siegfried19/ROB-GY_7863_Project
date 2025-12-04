@@ -113,13 +113,18 @@ class Go2EnvMoonFly(gym.Env):
         # 定义 action/observation 空间
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.num_actions,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
+        self.key_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_KEY, "init")
 
     def reset(self, *, seed=None, options=None):
     # 必写
         super().reset(seed=seed)
-
+        self.data
         # Reset mujoco
-        mujoco.mj_resetData(self.model, self.data)
+        mujoco.mj_resetDataKeyframe(self.model, self.data, self.key_id)
+
+        # 通常再 forward 一下保证所有派生量（矩阵、接触等）更新
+        mujoco.mj_forward(self.model, self.data)
+
 
         obs = self.get_observations()
         info = {}
@@ -136,6 +141,8 @@ class Go2EnvMoonFly(gym.Env):
 
         # 把 [-1,1] action 转成实际角度
         target_angles = joint_low + (action[:12] + 1) * 0.5 * (joint_high - joint_low)
+        abad_index = [0, 3, 6, 9]
+        target_angles [abad_index] = 0.0
 
         current_angles = self.data.qpos[7:19]
         current_vel    = self.data.qvel[6:18]
@@ -165,6 +172,7 @@ class Go2EnvMoonFly(gym.Env):
         # ----------------------------------------------------
         # 3. 合并 ctrl
         # ----------------------------------------------------
+   
         self.data.ctrl[:12] = joint_torque
         self.data.ctrl[12:16] = jet_force
 
@@ -245,7 +253,7 @@ class Go2EnvMoonFly(gym.Env):
     def _check_done(self, obs):
         qw, qx, qy, qz = self.data.qpos[3:7]
         roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', degrees=False)
-   
+
         z = self.data.qpos[2]
         x = self.data.qpos[0]
         y = self.data.qpos[1]
@@ -255,13 +263,13 @@ class Go2EnvMoonFly(gym.Env):
         escaped = dist_xy > CRATER_RADIUS
    
 
-        if escaped and z < 0.35 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
+        if escaped and z < 0.5 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
             return True, "success_landing"
 
-        if abs(roll) > 0.7 or abs(pitch) > 0.7 or abs(yaw) > 0.5:
+        if abs(roll) > 0.7 or abs(pitch) > 0.9 or abs(yaw) > 0.5:
            return True, "unstable_orientation"
 
-        if z > 2.0:
+        if z > 5.0:
             return True, "too_high"
 
         if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():
