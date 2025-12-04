@@ -9,10 +9,12 @@ def generate_random_guassian_crater_png(crater_size=0.5, crater_depth=0.08, size
 
     for _ in range(crater_count):
         cx, cy = rng.integers(0, size, 2)
-        # ✅ 坑的半径由 crater_size 控制
+        
+        # 坑的半径由 crater_size 控制
         r = int(rng.integers(size * crater_size / 4, size * crater_size))
         crater = np.exp(-((X - cx)**2 + (Y - cy)**2) / (2 * (r / 8)**2))
-        # ✅ 坑的深度由 crater_depth 控制
+        
+        # 坑的深度由 crater_depth 控制
         Z -= crater * crater_depth
 
     # 归一化到 [0,1]
