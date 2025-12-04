@@ -11,7 +11,7 @@ PARAM_RANGES = {
     "foot_spin":  (0.005, 0.1),
     "foot_roll":  (0.001, 0.02),
     "crater_size":   (0.4, 0.7),
-    "crater_depth":  (0.8, 2),
+    "crater_depth":  (0.4, 2),
     "flat_ratio":    (0.3, 0.5),
 }
 

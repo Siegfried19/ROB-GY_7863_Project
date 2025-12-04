@@ -36,7 +36,7 @@ PARAM_RANGES = {
     "foot_spin": (0.001, 0.02),
     "foot_roll": (0.001, 0.02),
     "crater_size": (0.4, 0.7),
-    "crater_depth": (0.5, 1.5),
+    "crater_depth": (0.5, 2),
     "flat_ratio": (0.2, 0.4),
 }
 
@@ -66,7 +66,7 @@ def main():
     )
 
     # Numbers of parallel environments
-    NUM_ENVS = 32
+    NUM_ENVS = 16
     env_configs = []
     
     # Configure different environment parameters for each env

@@ -25,8 +25,6 @@ records = []
 refernces = []
 
 
-
-
 for step in range(100000):   # 运行2000步
     obs_tensor = torch.tensor(obs, dtype=torch.float32)
     #with torch.no_grad():

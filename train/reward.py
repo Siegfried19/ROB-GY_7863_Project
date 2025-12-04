@@ -122,27 +122,26 @@ def compute_reward_refence_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpC
 def compute_reward_fly(data, done, reason, crater_config):
     x, y, z = data.qpos[:3]
     vx, vy, vz = data.qvel[:3]
+    crater_radius = crater_config["size"] * 10.0
+    crater_radius_extra = crater_radius + 0.5   
+    crater_height = crater_config["depth"]
 
     dist_xy = np.sqrt(x*x + y*y)
-    crater_radius = crater_config["size"] * 10.0
-    escaped = dist_xy > crater_radius
+    escaped = dist_xy > crater_radius_extra
 
-    # ------------------------
-    # A) Escape reward (outward speed)
-    # ------------------------
+    # Escape reward
     radial_speed = (x*vx + y*vy) / (crater_radius + 1e-6)
-    r_escape = 10.0 * radial_speed
+    r_escape_plane = 8.0 * radial_speed
+    
+    r_escape_height = (dist_xy/crater_radius) * np.sqrt((z - crater_height)**2)
+    
 
-    # ------------------------
-    # B) Pose stability
-    # ------------------------
+    # Pose stability
     qw, qx, qy, qz = data.qpos[3:7]
     roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz')
     r_pose = -1.0 * abs(pitch) - 0.5 * abs(roll)
 
-    # ------------------------
-    # C) Jet energy penalty
-    # ------------------------
+    # et energy penalty
     jet = data.ctrl[12:16]
     r_jet = -0.05 * np.sum(jet * jet)
 
@@ -155,7 +154,7 @@ def compute_reward_fly(data, done, reason, crater_config):
         r_soft_v = -2.0 * max(0, abs(vz) - 0.5)
 
         # 2. height control
-        target_h = 0.3
+        target_h = crater_height
         r_soft_h = -3.0 * abs(z - target_h)
 
         # 3. landing stability
@@ -168,7 +167,7 @@ def compute_reward_fly(data, done, reason, crater_config):
     # ------------------------
     r_alive = 0.001
 
-    reward = r_escape + r_pose + r_jet + r_soft + r_alive
+    reward = r_escape_plane + r_escape_height + r_pose + r_jet + r_soft + r_alive + escaped*100.0
 
     # ------------------------
     # F) terminal bonus
@@ -179,7 +178,7 @@ def compute_reward_fly(data, done, reason, crater_config):
         else:
             reward -= 50
 
-    return reward, r_escape, r_pose, r_jet, r_soft
+    return reward, r_escape_plane, r_escape_height, r_pose, r_jet, r_soft
 
 def compute_reward_fly2(data, done, reason):
     x, y, z = data.qpos[:3]
