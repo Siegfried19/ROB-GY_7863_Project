@@ -10,9 +10,9 @@ PARAM_RANGES = {
     "foot_slide": (0.3, 1.0),
     "foot_spin":  (0.005, 0.1),
     "foot_roll":  (0.001, 0.02),
-    "crater_size":   (0.2, 0.6),
-    "crater_depth":  (0.5, 1.5),
-    "flat_ratio":    (0.1, 0.3),
+    "crater_size":   (0.4, 0.7),
+    "crater_depth":  (0.8, 2),
+    "flat_ratio":    (0.3, 0.5),
 }
 
 # --- 新增函数：用于 3D 渲染指定配置的环境 ---

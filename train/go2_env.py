@@ -154,11 +154,24 @@ class Go2EnvMoonFly(gym.Env):
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.rank = rank
         
-        if foot_friction is not None and body_friction is not None:
-            self._modify_physics(foot_friction, body_friction)
-            
-        if crater_config is not None:
-            self._modify_terrain(crater_config)
+        if crater_config is None:
+            self.crater_config = {
+                "size": 0.4, 
+                "depth": 1.0, 
+                "flat_ratio": 0.4
+            }
+        else:
+            self.crater_config = crater_config
+        
+        if foot_friction is None or body_friction is None:
+            self.foot_friction = [0.1, 0.005, 0.001]
+            self.body_friction = 0.5
+        else:
+            self.foot_friction = foot_friction
+            self.body_friction = body_friction
+        
+        self._modify_physics(self.foot_friction, self.body_friction)
+        self._modify_terrain(self.crater_config)
             
         self.data = mujoco.MjData(self.model)
         
@@ -170,16 +183,51 @@ class Go2EnvMoonFly(gym.Env):
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
 
     def reset(self, *, seed=None, options=None):
-    # 必写
         super().reset(seed=seed)
 
         # Reset mujoco
         mujoco.mj_resetData(self.model, self.data)
-
+        
+        # Initial stable pose
+        self.data.qpos[0] = 0.0
+        self.data.qpos[1] = 0.0 
+        self.data.qpos[2] = 0.35
+        self.data.qpos[3:7] = [1.0, 0.0, 0.0, 0.0]
+        
+        init_joint_angles = np.array([0, 0.9, -1.57] * 4, dtype=np.float32)
+        self.data.qpos[7:19] = init_joint_angles
+        self.data.qpos[7:19] += np.random.uniform(-0.05, 0.05, 12)
+        
+        # Simulate a few steps to settle down
+        settle_steps = 100
+        
+        kp = 60.0
+        kd = 3.0
+        
+        for _ in range(settle_steps):
+            # 计算保持初始姿态所需的力矩
+            current_angles = self.data.qpos[7:19]
+            current_vel    = self.data.qvel[6:18]
+            
+            # PD 控制: Target 是 init_joint_angles
+            torque = kp * (init_joint_angles - current_angles) - kd * current_vel
+            
+            # 限制力矩
+            max_torque = self.model.actuator_ctrlrange[:12, 1]
+            torque = np.clip(torque, -max_torque, max_torque)
+            
+            # 写入控制 (注意：Jet 推力设为 0)
+            self.data.ctrl[:12] = torque
+            self.data.ctrl[12:16] = 0.0 # 关掉火箭
+            
+            mujoco.mj_step(self.model, self.data)
+    
+        self.data.qvel[:6] = 0.0
         obs = self.get_observations()
         info = {}
 
         return obs, info
+    
     def step(self, action):
         action = np.clip(action, -1, 1)
 
@@ -319,7 +367,7 @@ class Go2EnvMoonFly(gym.Env):
     
     def _get_reward(self,obs):
         done,info = self._check_done(obs)
-        reward = compute_reward_fly(self.data, done, info)
+        reward = compute_reward_fly(self.data, done, info, self.crater_config)
         return reward
 
     def _check_done(self, obs):

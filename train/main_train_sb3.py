@@ -66,7 +66,7 @@ def main():
     )
 
     # Numbers of parallel environments
-    NUM_ENVS = 16
+    NUM_ENVS = 32
     env_configs = []
     
     # Configure different environment parameters for each env
@@ -137,7 +137,7 @@ def main():
     ])
 
     model.learn(
-        total_timesteps=20_000_000,           # 训练 200 万步
+        total_timesteps=200000000,           # 训练 200 万步
         callback=callback_list,
     )
 

@@ -119,18 +119,18 @@ def compute_reward_refence_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpC
         reward -= 20.0
     return float(reward)
     
-def compute_reward_fly(data, done, reason):
+def compute_reward_fly(data, done, reason, crater_config):
     x, y, z = data.qpos[:3]
     vx, vy, vz = data.qvel[:3]
 
     dist_xy = np.sqrt(x*x + y*y)
-    CRATER_RADIUS = 2.0
-    escaped = dist_xy > CRATER_RADIUS
+    crater_radius = crater_config["size"] * 10.0
+    escaped = dist_xy > crater_radius
 
     # ------------------------
     # A) Escape reward (outward speed)
     # ------------------------
-    radial_speed = (x*vx + y*vy) / (dist_xy + 1e-6)
+    radial_speed = (x*vx + y*vy) / (crater_radius + 1e-6)
     r_escape = 2.0 * radial_speed
 
     # ------------------------

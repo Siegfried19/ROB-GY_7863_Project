@@ -1,0 +1,32 @@
+==================== Generating Random Environments ====================
+[Env 0] Foot Fric: [0.094 0.019 0.015] | Body Fric: 0.094 | Depth: 0.66m
+[Env 1] Foot Fric: [0.04  0.017 0.012] | Body Fric: 0.040 | Depth: 0.52m
+[Env 2] Foot Fric: [0.172 0.005 0.004] | Body Fric: 0.172 | Depth: 0.80m
+[Env 3] Foot Fric: [0.103 0.007 0.013] | Body Fric: 0.103 | Depth: 0.79m
+[Env 4] Foot Fric: [0.108 0.016 0.005] | Body Fric: 0.108 | Depth: 1.09m
+[Env 5] Foot Fric: [0.133 0.004 0.002] | Body Fric: 0.133 | Depth: 1.47m
+[Env 6] Foot Fric: [0.082 0.003 0.014] | Body Fric: 0.082 | Depth: 0.62m
+[Env 7] Foot Fric: [0.036 0.018 0.006] | Body Fric: 0.036 | Depth: 0.81m
+[Env 8] Foot Fric: [0.123 0.005 0.019] | Body Fric: 0.123 | Depth: 1.44m
+[Env 9] Foot Fric: [0.132 0.019 0.003] | Body Fric: 0.132 | Depth: 0.55m
+[Env 10] Foot Fric: [0.096 0.006 0.017] | Body Fric: 0.096 | Depth: 0.78m
+[Env 11] Foot Fric: [0.054 0.016 0.002] | Body Fric: 0.054 | Depth: 1.27m
+[Env 12] Foot Fric: [0.031 0.016 0.014] | Body Fric: 0.031 | Depth: 1.27m
+[Env 13] Foot Fric: [0.091 0.003 0.017] | Body Fric: 0.091 | Depth: 0.83m
+[Env 14] Foot Fric: [0.083 0.007 0.015] | Body Fric: 0.083 | Depth: 1.39m
+[Env 15] Foot Fric: [0.05  0.015 0.015] | Body Fric: 0.050 | Depth: 1.27m
+============================================================
+Traceback (most recent call last):
+  File "/home/siegfried/Projects/ROB-GY_7863_Project/train/main_train_sb3.py", line 148, in <module>
+    main()
+  File "/home/siegfried/Projects/ROB-GY_7863_Project/train/main_train_sb3.py", line 103, in main
+    vec_env = SubprocVecEnv(env_fns)
+  File "/home/siegfried/anaconda3/envs/space-robotics-project/lib/python3.10/site-packages/stable_baselines3/common/vec_env/subproc_vec_env.py", line 119, in __init__
+    observation_space, action_space = self.remotes[0].recv()
+  File "/home/siegfried/anaconda3/envs/space-robotics-project/lib/python3.10/multiprocessing/connection.py", line 250, in recv
+    buf = self._recv_bytes()
+  File "/home/siegfried/anaconda3/envs/space-robotics-project/lib/python3.10/multiprocessing/connection.py", line 414, in _recv_bytes
+    buf = self._recv(4)
+  File "/home/siegfried/anaconda3/envs/space-robotics-project/lib/python3.10/multiprocessing/connection.py", line 379, in _recv
+    chunk = read(handle, remaining)
+ConnectionResetError: [Errno 104] Connection reset by peer

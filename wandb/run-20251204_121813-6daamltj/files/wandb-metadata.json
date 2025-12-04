@@ -1,0 +1,188 @@
+{
+    "os": "Linux-6.8.0-87-generic-x86_64-with-glibc2.35",
+    "python": "3.10.19",
+    "heartbeatAt": "2025-12-04T17:18:13.912066",
+    "startedAt": "2025-12-04T17:18:13.228135",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/home/siegfried/Projects/ROB-GY_7863_Project/train/main_train_sb3.py",
+    "codePathLocal": "train/main_train_sb3.py",
+    "codePath": "train/main_train_sb3.py",
+    "git": {
+        "remote": "https://github.com/Siegfried19/ROB-GY_7863_Project.git",
+        "commit": "9a51427026a5cb465afacd31216a31232adfb98b"
+    },
+    "email": "149208533+Siegfried19@users.noreply.github.com",
+    "root": "/home/siegfried/Projects/ROB-GY_7863_Project",
+    "host": "siegfried-Linux",
+    "username": "siegfried",
+    "executable": "/home/siegfried/anaconda3/envs/space-robotics-project/bin/python",
+    "cpu_count": 20,
+    "cpu_count_logical": 28,
+    "cpu_freq": {
+        "current": 1046.3118214285712,
+        "min": 800.0,
+        "max": 4842.857142857143
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 1199.987,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 1500.0,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 1302.958,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 1400.0,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 1280.428,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 1785.881,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 1109.76,
+            "min": 800.0,
+            "max": 5400.0
+        },
+        {
+            "current": 1169.856,
+            "min": 800.0,
+            "max": 5400.0
+        },
+        {
+            "current": 1201.648,
+            "min": 800.0,
+            "max": 5400.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 5400.0
+        },
+        {
+            "current": 1170.386,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 1178.153,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 5300.0
+        },
+        {
+            "current": 897.258,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 1101.174,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 907.408,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 878.101,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 891.57,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 854.215,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 899.517,
+            "min": 800.0,
+            "max": 4200.0
+        },
+        {
+            "current": 1000.034,
+            "min": 800.0,
+            "max": 4200.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 796.8301696777344,
+            "used": 17.51569366455078
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 4070 SUPER",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 4070 SUPER",
+            "memory_total": 12878610432
+        }
+    ],
+    "memory": {
+        "total": 31.151466369628906
+    }
+}
