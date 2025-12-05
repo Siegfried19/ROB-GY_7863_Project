@@ -23,7 +23,7 @@ parser.add_argument('--save_path', type=str, default="output/sb3_fly",
                     help='save path')
 parser.add_argument('--resume', type=bool, default=False,
                     help='whether to resume training')
-parser.add_argument('--resume_path', type=str, default="./output/sb3_fly/sb3_fly_but_cannot_landing.zip",
+parser.add_argument('--resume_path', type=str, default="./output/sb3_fly/can_track_bad_landing_x_vara_vel/sb3_fly_7000000_steps.zip",
                     help='path to resume training')
 args = parser.parse_args()
 

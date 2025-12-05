@@ -1,47 +1,94 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R  
 from dataclasses import dataclass
-
+import numpy as np
+from dataclasses import dataclass
+import numpy as np
+from dataclasses import dataclass
 
 @dataclass
 class LunarJumpCfg:
     z0: float = 0.5          # 站立高度
-    g: float = 3.71          # 月球重力
-    h_peak: float = 1.0        # 抬升高度
-    L: float = 3.0             # 水平跨越距离
-    T_buffer: float = 0.4      # 着地后缓冲时间（可选）
+    g: float = 3.71          # 重力（你这里是火星）
+    h_peak: float = 2.0      # 抬升高度（相对 z0）
+    L: float = 3.0           # 水平跨越距离
+    T_buffer: float = 0.2    # 落地后缓冲时间
+    const_ratio: float = 0.5 # 前多少比例时间用匀速（比如 40%）
 
 class LunarJumpRef:
     def __init__(self, cfg=LunarJumpCfg()):
         self.cfg = cfg
-        self.v0z = float(np.sqrt(2*cfg.g*cfg.h_peak))
+
+        # 垂直方向：物理抛物线
+        self.v0z = float(np.sqrt(2 * cfg.g * cfg.h_peak))
         self.t_up = self.v0z / cfg.g
-        self.T = 2*self.t_up
-        self.v0x = cfg.L / self.T
+        self.T_flight = 2 * self.t_up           # 空中总时间
+        self.T = self.T_flight + cfg.T_buffer   # 加上缓冲段
+
+        # 水平平均速度（用来定义 v_const）
+        self.v_const = cfg.L / self.T_flight
+
+        # 匀速阶段结束时间
+        self.t1 = cfg.const_ratio * self.T_flight
+
+        # 匀速阶段末状态
+        self.x1 = self.v_const * self.t1
+        self.dx = cfg.L - self.x1
+        self.T2 = self.T_flight - self.t1
+
+    # --- x(t), vx(t): 先匀速，再减速 ---
+    def x(self, t):
+        c = self.cfg
+        if t <= self.t1:
+            # 匀速
+            return self.v_const * t
+        elif t <= self.T_flight:
+            # 平滑减速段
+            s = (t - self.t1) / self.T2  # 0~1
+            f = -s**3 + s**2 + s         # 位置基函数
+            return self.x1 + self.dx * f
+        else:
+            # 落地后水平位置保持在 L
+            return c.L
+
+    def vx(self, t):
+        c = self.cfg
+        if t <= self.t1:
+            return self.v_const
+        elif t <= self.T_flight:
+            s = (t - self.t1) / self.T2
+            fp = -3*s**2 + 2*s + 1       # f'(s)
+            return self.dx * fp / self.T2
+        else:
+            return 0.0
+
+    # --- z(t), vz(t): 抛物线 + 缓冲 ---
+    def z(self, t):
+        c = self.cfg
+        if t <= self.T_flight:
+            return c.z0 + self.v0z*t - 0.5*c.g*t*t
+        else:
+            return c.z0
+
+    def vz(self, t):
+        c = self.cfg
+        if t <= self.T_flight:
+            return self.v0z - c.g*t
+        else:
+            return 0.0
 
     def ref(self, t):
-        c = self.cfg
-        if t <= self.T:
-            x = self.v0x * t
-            z = c.z0 + self.v0z*t - 0.5*c.g*t*t
-            vx = self.v0x
-            vz = self.v0z - c.g*t
-        else:
-            # 简单缓冲：靠近地面期望（也可做 quintic）
-          
-            z = c.z0
-            vx = 1.0               # 着地后期望停下（如需继续跑可改为 vx_ref=目标速度）
-            vz = 0.0
-            x = self.v0x * self.T +vx*(t - self.T) # 水平到 3m 后保持
-        return x, z, vx, vz
+        """返回 x_ref, z_ref, vx_ref, vz_ref"""
+        return self.x(t), self.z(t), self.vx(t), self.vz(t)
+
     
 @dataclass
 class RewardJumpCfg:
-    w_z: float = 3.0
-    w_v: float = 2.0
-    w_ori: float = 1.2
-    w_land: float = 2.0
-    lam_tau: float = 1e-3
+    w_z: float = 2.0
+    w_v: float = 3.0
+    w_ori: float = 0.5
+    w_land: float = 30.0
+    lam_tau: float = 0.0
     sz: float = 0.5
     sv: float = 0.5
     sori : float = 0.2
@@ -89,10 +136,12 @@ def compute_reward_walk(data, done):
         r += cfg.r_done
     return float(r)
 
-def compute_reward_refence_fly(data, done, reason, ref = LunarJumpRef(), rw= RewardJumpCfg()):
+def compute_reward_refence_fly(data, done, is_land, ref = LunarJumpRef(), rw= RewardJumpCfg()):
     t = data.time
-
+    reward_list = []
     z  = float(data.qpos[2])
+    x  = float(data.qpos[0])
+    y  = float(data.qpos[1])
     x  = float(data.qpos[0])
     vx = float(data.qvel[0])
     vz = float(data.qvel[2])
@@ -103,26 +152,40 @@ def compute_reward_refence_fly(data, done, reason, ref = LunarJumpRef(), rw= Rew
  
     # 误差（仅用 z/v 跟踪；如需更严格也可加入 x 跟踪项）
     rz = np.exp(-(((z - z_ref)**2)+(x-x_ref)**2) / (rw.sz**2))
-    rv = - 0.5 * ( (vx - vx_ref)**2 + (vz - vz_ref)**2 )
-    rori = np.exp(-(roll**2 + pitch**2)/ (rw.sori**2))+1.0 * np.cos(yaw) 
+    rv = np.exp(-((vx - vx_ref)**2 + (vz - vz_ref)**2 ) / (rw.sv**2))
+
+    #rori = np.exp(-(roll**2 + pitch**2)/ (rw.sori**2))+ 0.1* np.cos(yaw) 
+
+    rori = -1.0 * (abs(pitch) + abs(roll)+abs(yaw)+ abs(y))
+
+    # print("=================")
     # print("ref",x_ref, z_ref, vx_ref, vz_ref )
     # print("robot",x,z,vx,vz)
-    # print("reward", rz,rv)
+    # print("reward", rz,rv,rori)
+    
     # 靠近地面时鼓励小竖直速度（软着陆）
-    near_ground = (ref.cfg.z0 - 0.3) < z < (ref.cfg.z0 + 0.3)
-    rland = np.exp(-abs(vz)) if near_ground else 0.0
-
+    near_ground =  x>ref.cfg.L/2 and (ref.cfg.z0 - 0.3) < z < (ref.cfg.z0 + 0.5)
+    if near_ground:
+        rland = np.exp(-abs(vz)) +np.exp(-(roll**2 + pitch**2)/ (rw.sori**2))
+        rv = np.exp(-((vx - vx_ref)**2 ) / (rw.sv**2))
+    else:
+        rland  = 0.0
     # 能耗惩罚
     tau = np.abs(np.array(data.actuator_force[12:], dtype=float)).sum()
     r_tau = -rw.lam_tau * tau
     #print(rz,rv,rori,r_tau)
-    r_alive = 0.001
-    reward = rw.w_z*rz + rw.w_v*rv + rw.w_ori*rori + r_tau+ rw.w_land*rland +r_alive
-    
- 
+    # r_alive = 0.001
+    # if is_land:
+    #     r_alive = 0.01
+    reward = rw.w_z*rz + rw.w_v*rv + rw.w_ori*rori + r_tau+ rw.w_land*rland
+    reward_list = [rw.w_z*rz,rw.w_v*rv,rw.w_ori*rori,r_tau,rw.w_land*rland]
     if done:
-        reward -= 500
-    return float(reward)
+        if is_land:
+            print("landing!")
+            reward += 10
+        #reward -= 500
+
+    return float(reward),reward_list
     
 def compute_reward_fly(data, done, reason):
     x, y, z = data.qpos[:3]

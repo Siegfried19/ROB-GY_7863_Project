@@ -27,7 +27,9 @@ class Go2EnvMoonWalk(gym.Env):
         super().reset(seed=seed)
 
         # Reset mujoco
-        mujoco.mj_resetData(self.model, self.data)
+        KEYFRAME_ID = 0   # 如果这是你 XML 的第一个 keyframe
+        mujoco.mj_resetDataKeyframe(self.model, self.data, KEYFRAME_ID)
+
 
         obs = self.get_observations()
         info = {}
@@ -124,7 +126,7 @@ class Go2EnvMoonFly(gym.Env):
         mujoco.mj_resetDataKeyframe(self.model, self.data, self.key_id)
 
         # 通常再 forward 一下保证所有派生量（矩阵、接触等）更新
-        mujoco.mj_forward(self.model, self.data)
+     
         self.is_land = False
 
         obs = self.get_observations()
@@ -147,13 +149,15 @@ class Go2EnvMoonFly(gym.Env):
 
         current_angles = self.data.qpos[7:19]
         current_vel    = self.data.qvel[6:18]
-
+        t = self.data.time
         kp = 40.0
         kd = 0.6
 
         joint_torque = kp * (target_angles - current_angles) - kd * current_vel
 
         # 限制在 actuator torque 范围内
+        
+     
         joint_max = self.model.actuator_ctrlrange[:12, 1]
         joint_torque = np.clip(joint_torque, -joint_max, joint_max)
 
@@ -166,8 +170,8 @@ class Go2EnvMoonFly(gym.Env):
         z = self.data.qpos[2]
 
         # 例如超过 0.7m 之后禁止继续喷火
-        if z > 0.7:
-            jet_max = jet_max*0.1      
+        if z > 1.0:
+            jet_max = jet_max*0.2     
 
         if  self.is_land:
             jet_max =0
@@ -180,7 +184,10 @@ class Go2EnvMoonFly(gym.Env):
         # ----------------------------------------------------
         # 3. 合并 ctrl
         # ----------------------------------------------------
-   
+        if t<0.05:
+            joint_torque = 0
+            jet_force = 0
+
         self.data.ctrl[:12] = joint_torque
         self.data.ctrl[12:16] = jet_force
 
@@ -191,13 +198,17 @@ class Go2EnvMoonFly(gym.Env):
         # 4. 返回
         # ----------------------------------------------------
         obs = self.get_observations()
-        reward = self._get_reward(obs)
+        rewards,reward_each = self._get_reward(obs)
         terminated, reason = self._check_done(obs)
         truncated = False  # 暂时还没有时间截断机制
+        info = {"termination_reason": reason,
+                "pos_rd":reward_each[0],
+                "vel_rd":reward_each[1],
+                "ori_rd":reward_each[2],
+                "tau_rd":reward_each[3],
+                "land_rd":reward_each[4]}
 
-        info = {"termination_reason": reason}
-
-        return obs, reward, terminated, truncated, info
+        return obs, rewards, terminated, truncated, info
 
        
     def get_observations(self):
@@ -255,11 +266,13 @@ class Go2EnvMoonFly(gym.Env):
     
     def _get_reward(self,obs):
         done,info = self._check_done(obs)
-        reward = compute_reward_refence_fly(self.data, done,info)
-        return reward
+
+        rewards,reward_each = compute_reward_refence_fly(self.data, done,self.is_land )
+        return rewards,reward_each
 
     def _check_done(self, obs):
         qw, qx, qy, qz = self.data.qpos[3:7]
+        t = self.data.time
         roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', degrees=False)
 
         z = self.data.qpos[2]
@@ -274,17 +287,18 @@ class Go2EnvMoonFly(gym.Env):
         # if escaped and z < 0.5 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
         #     return True, "success_landing"
     
-        if 3.2> x > 2.8 and 0.4< z < 0.6 and abs(roll) < 0.5 and abs(pitch) < 0.5 and abs(yaw) < 0.5 :
-           print("landing!!!!!!!!!!")
+        if 3.2> x > 2.8 and z < 0.4 and abs(roll) < 0.5 and abs(pitch) < 0.5 and abs(yaw) < 0.5 :
            self.is_land = True
-           return False, "landing"
+           return True, "landing"
     
-        if abs(roll) > 0.7 or abs(pitch) > 0.9 or abs(yaw) > 0.5:
+        if abs(roll) > 0.7 or abs(pitch) > 0.7 or abs(yaw) > 0.7:
            return True, "unstable_orientation"
 
-        if z > 2.0:
-            return True, "too_high"
-
+        if x>3.5 or z > 4.0:
+            return True, "too_far"
+        
+        if t> 2.5:
+            return True, "too_long"
         if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():
             return True, "nan_error"
 
