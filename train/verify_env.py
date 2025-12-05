@@ -7,14 +7,11 @@ from go2_env import Go2EnvMoonFly
 
 # 复制你 main_train_sb3.py 中的参数范围，保持一致
 PARAM_RANGES = {
-    "foot_slide": (0.3, 1.0),
-    "foot_spin":  (0.005, 0.1),
-    "foot_roll":  (0.001, 0.02),
-    "crater_size":   (0.4, 0.7),
-    "crater_depth":  (0.4, 2),
-    "flat_ratio":    (0.3, 0.5),
+    "foot_slide": (0.1, 0.5),
+    "foot_spin": (0.005, 0.02),
+    "foot_roll": (0.0005, 0.02),
+    "vally_width": (2.0, 5.0),
 }
-
 # --- 新增函数：用于 3D 渲染指定配置的环境 ---
 def render_env_in_3d(config):
     """
@@ -28,7 +25,7 @@ def render_env_in_3d(config):
         xml_path="../unitree_go2/scene_moon_jet.xml",
         foot_friction=config["foot_friction"],
         body_friction=config["body_friction"],
-        crater_config=config["crater_config"],
+        vally_width=config["vally_width"],
         rank=config["rank"] # 关键：传入同样的 rank 确保随机地形种子一致
     )
     
@@ -78,19 +75,14 @@ def verify_environments():
         foot_fric_vector = [f_slide, f_spin, f_roll]
         body_fric_scalar = f_slide # 你的绑定逻辑
 
-        c_size  = np.random.uniform(*PARAM_RANGES["crater_size"])
-        c_depth = np.random.uniform(*PARAM_RANGES["crater_depth"])
+        vally_width = np.random.uniform(*PARAM_RANGES["vally_width"])
         c_flat  = np.random.uniform(*PARAM_RANGES["flat_ratio"])
 
         current_config = {
             "xml_path": "../unitree_go2/scene_moon_jet.xml",
             "foot_friction": foot_fric_vector,
             "body_friction": body_fric_scalar,
-            "crater_config": {
-                "size": c_size, 
-                "depth": c_depth, 
-                "flat_ratio": c_flat
-            },
+            "vally_width": vally_width,
             "rank": i
         }
         saved_configs.append(current_config)

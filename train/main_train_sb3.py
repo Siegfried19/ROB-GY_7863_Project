@@ -31,13 +31,12 @@ parser.add_argument('--xml_path', type=str, default="../unitree_go2/scene_moon_j
                     help='path to mujoco xml')
 args = parser.parse_args()
 
+# 还是保持传入，但是目前先不用这些
 PARAM_RANGES = {
     "foot_slide": (0.1, 0.5),
     "foot_spin": (0.005, 0.02),
     "foot_roll": (0.0005, 0.02),
-    "crater_size": (0.4, 0.7),
-    "crater_depth": (0.5, 2),
-    "flat_ratio": (0.2, 0.4),
+    "vally_width": (2.0, 5.0),
 }
 
 def make_env(rank, config):
@@ -47,11 +46,7 @@ def make_env(rank, config):
                     xml_path=args.xml_path,
                     foot_friction=config["foot_friction"], # 这是一个列表
                     body_friction=config["body_friction"], # 这是一个标量 (数值)
-                    crater_config={
-                        "size": config["crater_size"],
-                        "depth": config["crater_depth"],
-                        "flat_ratio": config["flat_ratio"]
-                    },
+                    vally_width=config["vally_width"],
                     rank=rank
                 )
         env = Monitor(env)
@@ -76,26 +71,24 @@ def main():
         f_slide = np.random.uniform(*PARAM_RANGES["foot_slide"])
         f_spin  = np.random.uniform(*PARAM_RANGES["foot_spin"])
         f_roll  = np.random.uniform(*PARAM_RANGES["foot_roll"])
-        foot_fric_vector = [f_slide, f_spin, f_roll]
+        # foot_fric_vector = [f_slide, f_spin, f_roll]
+        foot_fric_vector = [0.8, 0.02, 0.01]
         
-        body_fric_scalar = f_slide
+        body_fric_scalar = f_slide * 0.5
         
-        c_size  = np.random.uniform(*PARAM_RANGES["crater_size"])
-        c_depth = np.random.uniform(*PARAM_RANGES["crater_depth"])
-        c_flat  = np.random.uniform(*PARAM_RANGES["flat_ratio"])
+        # v_width = np.random.uniform(*PARAM_RANGES["vally_width"])
+        v_width = 3.0
         
         env_config = {
             "foot_friction": foot_fric_vector,  # [slide, spin, roll]
             "body_friction": body_fric_scalar,  # equal to slide
-            "crater_size":   c_size,
-            "crater_depth":  c_depth,
-            "flat_ratio":    c_flat,
+            "vally_width":   v_width,
         }
         
         env_configs.append(env_config)
         print(f"[Env {i}] Foot Fric: {np.round(foot_fric_vector, 3)} | "
               f"Body Fric: {body_fric_scalar:.3f} | "
-              f"Depth: {c_depth:.2f}m")
+              f"Vally Width: {v_width:.2f}m")
     print(f"{'='*60}")
     
     # Generate vectorized environments

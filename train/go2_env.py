@@ -145,7 +145,7 @@ class Go2EnvMoonFly(gym.Env):
         xml_path="../unitree_go2/scene_moon_jet.xml",
         foot_friction=None,
         body_friction=None,
-        crater_config=None,
+        vally_width=None,
         rank=0
         ):
         
@@ -154,24 +154,18 @@ class Go2EnvMoonFly(gym.Env):
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.rank = rank
         
-        if crater_config is None:
-            self.crater_config = {
-                "size": 0.4, 
-                "depth": 1.0, 
-                "flat_ratio": 0.4
-            }
-        else:
-            self.crater_config = crater_config
+        if vally_width is None:
+            self.vally_width = 3.0
         
         if foot_friction is None or body_friction is None:
-            self.foot_friction = [0.1, 0.005, 0.001]
-            self.body_friction = 0.5
+            self.foot_friction = [0.8, 0.02, 0.01]
+            self.body_friction = 0.4
         else:
             self.foot_friction = foot_friction
             self.body_friction = body_friction
         
         self._modify_physics(self.foot_friction, self.body_friction)
-        self._modify_terrain(self.crater_config)
+        self._modify_terrain(self.vally_width)
             
         self.data = mujoco.MjData(self.model)
         
@@ -189,9 +183,9 @@ class Go2EnvMoonFly(gym.Env):
         mujoco.mj_resetData(self.model, self.data)
         
         # Initial stable pose
-        self.data.qpos[0] = 0.0
+        self.data.qpos[0] = 1.5
         self.data.qpos[1] = 0.0 
-        self.data.qpos[2] = 0.35
+        self.data.qpos[2] = 3.35
         self.data.qpos[3:7] = [1.0, 0.0, 0.0, 0.0]
         
         init_joint_angles = np.array([0, 0.9, -1.57] * 4, dtype=np.float32)
@@ -288,12 +282,12 @@ class Go2EnvMoonFly(gym.Env):
         # 4. 返回
         # ----------------------------------------------------
         obs = self.get_observations()
-        reward, r_escape, r_pose, r_jet, r_soft = self._get_reward(obs)
-        terminated, reason = self._check_done(obs)
+        reward, r_cross, r_pose, r_jet, r_soft = self._get_reward(obs)
+        terminated, reason = self._check_done(obs, self.vally_width)
         truncated = False  # 你暂时还没有时间截断机制
 
         info = {"termination_reason": reason,
-                "r_escape": r_escape,
+                "r_cross": r_cross,
                 "r_pose": r_pose,
                 "r_jet": r_jet,
                 "r_soft": r_soft}
@@ -350,43 +344,26 @@ class Go2EnvMoonFly(gym.Env):
                 # 只修改滑动摩擦 (索引0)
                 self.model.geom_friction[geom_id, 0] = body_friction
             
-    def _modify_terrain(self, config):
-        hfield_name = "moon_hf" # 请确保 scene_moon_jet.xml 里 hfield 叫这个名字
-        hfield_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_HFIELD, hfield_name)
+    def _modify_terrain(self, width):
+        geom_name = "platform_end"
+        geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
         
-        if hfield_id != -1:
-            # 获取 XML 中定义的网格尺寸
-            nrow = self.model.hfield_nrow[hfield_id]
-            ncol = self.model.hfield_ncol[hfield_id]
+        if geom_id != -1:
+            half_len_x = self.model.geom_size[geom_id, 0]
+            start_edge = 2.0
+            new_left_edge = start_edge + width
+            new_center_x = new_left_edge + half_len_x
+            self.model.geom_pos[geom_id, 0] = new_center_x
+        if self.rank == 0:
+                print(f"[Env 0] Gap Width: {width:.2f}m | Start Edge: {start_edge_x} | End Edge: {new_left_edge:.2f}")
             
-            # 生成新数据
-            # 使用 rank 作为种子的一部分，确保不同环境生成不同的微小噪声(如果有)
-            # 或者即使参数相同，也可以通过 seed 引入差异
-            new_data = get_crater_height_map(
-                size=nrow, # 假设 nrow == ncol
-                crater_size=config.get("size", 0.3),
-                crater_depth=config.get("depth", 1.0),
-                flat_ratio=config.get("flat_ratio", 0.2),
-                seed=100 + self.rank 
-            )
             
-            # 写入内存
-            start_addr = self.model.hfield_adr[hfield_id]
-            expected_len = nrow * ncol
-            
-            if len(new_data) == expected_len:
-                self.model.hfield_data[start_addr : start_addr + expected_len] = new_data
-            else:
-                print(f"[Error] Generated terrain size {len(new_data)} != Model hfield size {expected_len}")
-        else:
-            print(f"[Warning] HField '{hfield_name}' not found. Terrain modification skipped.")
-    
     def _get_reward(self,obs):
-        done,info = self._check_done(obs)
-        reward, r_escape, r_pose, r_jet, r_soft = compute_reward_fly(self.data, done, info, self.crater_config)
-        return reward, r_escape, r_pose, r_jet, r_soft
+        done,info = self._check_done(obs, self.vally_width)
+        reward, r_cross, r_pose, r_jet, r_soft = compute_reward_fly(self.data, done, info, self.vally_width)
+        return reward, r_cross, r_pose, r_jet, r_soft
 
-    def _check_done(self, obs):
+    def _check_done(self, obs, vally_width):
         qw, qx, qy, qz = self.data.qpos[3:7]
         roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', degrees=False)
 
@@ -394,18 +371,19 @@ class Go2EnvMoonFly(gym.Env):
         x = self.data.qpos[0]
         y = self.data.qpos[1]
         vz = self.data.qvel[2]
-        CRATER_RADIUS = 2
-        dist_xy = np.sqrt(x**2 + y**2)
-        escaped = dist_xy > CRATER_RADIUS
+        cross = x > (2.0 + vally_width)
    
 
-        if escaped and z < 0.35 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
+        if cross and z < 3.4 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
             return True, "success_landing"
 
         if abs(roll) > 0.7 or abs(pitch) > 0.9:
            return True, "unstable_orientation"
+       
+        if z < 2:
+            return True, "fallen_in_gap"
 
-        if z > 3.0:
+        if z > 10:
             return True, "too_high"
 
         if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():
@@ -418,76 +396,3 @@ class Go2EnvMoonFly(gym.Env):
             self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
         self.viewer.sync()
         
-    # def _get_robot_body_ids(self, root_name="base"):
-    #     root_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, root_name)
-    #     if root_id == -1:
-    #         print(f"[Warning] Robot root body '{root_name}' not found.")
-    #         return set()
-
-    #     # 1. 构建父子关系表 (Parent -> Children List)
-    #     # model.body_parentid[i] 存储了第 i 个 body 的父级 ID
-    #     tree = {}
-    #     for i in range(self.model.nbody):
-    #         parent = self.model.body_parentid[i]
-    #         if parent not in tree:
-    #             tree[parent] = []
-    #         tree[parent].append(i)
-
-    #     # 2. BFS (广度优先搜索) 遍历获取整个子树的所有 ID
-    #     robot_body_ids = set()
-    #     queue = [root_id]
-        
-    #     while queue:
-    #         curr_id = queue.pop(0)
-    #         robot_body_ids.add(curr_id) # 加入白名单
-            
-    #         # 如果当前节点有子节点，将子节点加入队列继续查找
-    #         if curr_id in tree:
-    #             queue.extend(tree[curr_id])
-                
-    #     return robot_body_ids
-
-    
-    # def _modify_physics(self, foot_friction, body_friction):
-    #     """
-    #     foot_friction: [sliding, torsional, rolling] (3维列表)
-    #     body_friction: float (标量)
-    #     """
-    #     # 1. 获取白名单 (属于机器人的所有 Body ID)
-    #     robot_ids = self._get_robot_body_ids("base")
-
-    #     # 2. 找出 4 只脚的 Geom ID，用于特殊处理
-    #     foot_names = ["FL", "FR", "RL", "RR"]
-    #     foot_geom_ids = set()
-    #     for name in foot_names:
-    #         fid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, name)
-    #         if fid != -1:
-    #             foot_geom_ids.add(fid)
-    #         else:
-    #             print(f"[Warning] Foot geom '{name}' not found.")
-
-    #     # 3. 遍历模型中所有的 Geom (包括机器人、地面、背景物体)
-    #     for geom_id in range(self.model.ngeom):
-            
-    #         # --- 过滤 A: 跳过视觉几何体 (Visual Geoms) ---
-    #         # contype==0 表示不参与碰撞检测，改了也没用
-    #         if self.model.geom_contype[geom_id] == 0:
-    #             continue
-
-    #         # --- 过滤 B: 安全检查 ---
-    #         # 查一下这个 geom 挂在哪个 body 下面？
-    #         owner_body_id = self.model.geom_bodyid[geom_id]
-            
-    #         # 如果这个 body 不在机器人的白名单里 (比如它是 floor, body_id=0)，直接跳过！
-    #         if owner_body_id not in robot_ids:
-    #             continue
-
-    #         # --- 4. 应用修改 ---
-    #         if geom_id in foot_geom_ids:
-    #             # 情况 1: 是脚 -> 设置全套 3D 摩擦力
-    #             # 注意：必须确保传入的是 numpy array 或 list
-    #             self.model.geom_friction[geom_id] = np.array(foot_friction, dtype=np.float64)
-    #         else:
-    #             # 情况 2: 是机器人的其他部位 (机身、大腿、小腿、髋部) -> 设置滑动摩擦力
-    #             # 只修改第 0 个分量 (Sliding)，保持 Torsional/Rolling 为 XML 里的默认值
-    #             self.model.geom_friction[geom_id, 0] = body_friction

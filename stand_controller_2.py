@@ -53,7 +53,7 @@ def pd_for_joint(model, data, joint_id, target_pos):
     derr = -data.qvel[qvel_idx]
     return kp * err + kd * derr
 
-def stand_still(model_path=os.path.join("unitree_go2", "scene_moon_jet.xml")):
+def stand_still(model_path=os.path.join("unitree_go2", "scene_moon_velly_jet.xml")):
     model = mujoco.MjModel.from_xml_path(model_path)
     data = mujoco.MjData(model)
     
