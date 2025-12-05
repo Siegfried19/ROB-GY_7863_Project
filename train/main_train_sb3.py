@@ -36,7 +36,7 @@ PARAM_RANGES = {
     "foot_slide": (0.1, 0.5),
     "foot_spin": (0.005, 0.02),
     "foot_roll": (0.0005, 0.02),
-    "vally_width": (2.0, 5.0),
+    "valley_width": (2.0, 5.0),
 }
 
 def make_env(rank, config):
@@ -46,7 +46,7 @@ def make_env(rank, config):
                     xml_path=args.xml_path,
                     foot_friction=config["foot_friction"], # 这是一个列表
                     body_friction=config["body_friction"], # 这是一个标量 (数值)
-                    vally_width=config["vally_width"],
+                    valley_width=config["valley_width"],
                     rank=rank
                 )
         env = Monitor(env)
@@ -82,13 +82,13 @@ def main():
         env_config = {
             "foot_friction": foot_fric_vector,  # [slide, spin, roll]
             "body_friction": body_fric_scalar,  # equal to slide
-            "vally_width":   v_width,
+            "valley_width":   v_width,
         }
         
         env_configs.append(env_config)
         print(f"[Env {i}] Foot Fric: {np.round(foot_fric_vector, 3)} | "
               f"Body Fric: {body_fric_scalar:.3f} | "
-              f"Vally Width: {v_width:.2f}m")
+              f"Valley Width: {v_width:.2f}m")
     print(f"{'='*60}")
     
     # Generate vectorized environments

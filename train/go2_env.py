@@ -142,10 +142,10 @@ class Go2EnvMoonWalk(gym.Env):
 class Go2EnvMoonFly(gym.Env):
     def __init__(
         self, 
-        xml_path="../unitree_go2/scene_moon_jet.xml",
+        xml_path="../unitree_go2/scene_moon_valley_jet.xml",
         foot_friction=None,
         body_friction=None,
-        vally_width=None,
+        valley_width=None,
         rank=0
         ):
         
@@ -154,8 +154,10 @@ class Go2EnvMoonFly(gym.Env):
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.rank = rank
         
-        if vally_width is None:
-            self.vally_width = 3.0
+        if valley_width is None:
+            self.valley_width = 3.0
+        else:
+            self.valley_width = valley_width
         
         if foot_friction is None or body_friction is None:
             self.foot_friction = [0.8, 0.02, 0.01]
@@ -165,7 +167,7 @@ class Go2EnvMoonFly(gym.Env):
             self.body_friction = body_friction
         
         self._modify_physics(self.foot_friction, self.body_friction)
-        self._modify_terrain(self.vally_width)
+        self._modify_terrain(self.valley_width)
             
         self.data = mujoco.MjData(self.model)
         
@@ -283,7 +285,7 @@ class Go2EnvMoonFly(gym.Env):
         # ----------------------------------------------------
         obs = self.get_observations()
         reward, r_cross, r_pose, r_jet, r_soft = self._get_reward(obs)
-        terminated, reason = self._check_done(obs, self.vally_width)
+        terminated, reason = self._check_done(obs, self.valley_width)
         truncated = False  # 你暂时还没有时间截断机制
 
         info = {"termination_reason": reason,
@@ -354,16 +356,13 @@ class Go2EnvMoonFly(gym.Env):
             new_left_edge = start_edge + width
             new_center_x = new_left_edge + half_len_x
             self.model.geom_pos[geom_id, 0] = new_center_x
-        if self.rank == 0:
-                print(f"[Env 0] Gap Width: {width:.2f}m | Start Edge: {start_edge_x} | End Edge: {new_left_edge:.2f}")
-            
             
     def _get_reward(self,obs):
-        done,info = self._check_done(obs, self.vally_width)
-        reward, r_cross, r_pose, r_jet, r_soft = compute_reward_fly(self.data, done, info, self.vally_width)
+        done,info = self._check_done(obs, self.valley_width)
+        reward, r_cross, r_pose, r_jet, r_soft = compute_reward_fly(self.data, done, info, self.valley_width)
         return reward, r_cross, r_pose, r_jet, r_soft
 
-    def _check_done(self, obs, vally_width):
+    def _check_done(self, obs, valley_width):
         qw, qx, qy, qz = self.data.qpos[3:7]
         roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz', degrees=False)
 
@@ -371,7 +370,7 @@ class Go2EnvMoonFly(gym.Env):
         x = self.data.qpos[0]
         y = self.data.qpos[1]
         vz = self.data.qvel[2]
-        cross = x > (2.0 + vally_width)
+        cross = x > (2.0 + valley_width)
    
 
         if cross and z < 3.4 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate

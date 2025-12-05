@@ -160,7 +160,7 @@ def compute_reward_fly(data, done, reason, vally_width):
     # ------------------------
     r_alive = 0.001
 
-    reward = r_cross + r_pose + r_jet + r_soft + r_alive + cross*500.0
+    reward = r_cross + r_pose + r_jet + r_soft + r_alive + cross*10.0
 
     # ------------------------
     # F) terminal bonus
