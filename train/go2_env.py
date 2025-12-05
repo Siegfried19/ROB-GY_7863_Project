@@ -195,7 +195,7 @@ class Go2EnvMoonFly(gym.Env):
         self.data.qpos[7:19] += np.random.uniform(-0.05, 0.05, 12)
         
         # Simulate a few steps to settle down
-        settle_steps = 100
+        settle_steps = 500
         
         kp = 60.0
         kd = 3.0

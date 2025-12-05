@@ -136,7 +136,7 @@ def compute_reward_fly(data, done, reason, vally_width):
 
     # et energy penalty
     jet = data.ctrl[12:16]
-    r_jet = -0.0006 * np.sum(jet)
+    r_jet = 0 * np.sum(jet)
 
     # ------------------------
     # D) Soft landing reward (only after escape)
