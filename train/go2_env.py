@@ -239,6 +239,18 @@ class Go2EnvMoonFly(gym.Env):
 
         # 把 [-1,1] action 转成实际角度
         target_angles = joint_low + (action[:12] + 1) * 0.5 * (joint_high - joint_low)
+        
+        # 限制hip的角度
+        # hip_limit = 0.1745
+        # target_angles[0] = np.clip(target_angles[0], -hip_limit, hip_limit) # FL_hip
+        # target_angles[3] = np.clip(target_angles[3], -hip_limit, hip_limit) # FR_hip
+        # target_angles[6] = np.clip(target_angles[6], -hip_limit, hip_limit) # RL_hip
+        # target_angles[9] = np.clip(target_angles[9], -hip_limit, hip_limit) # RR_hip
+        
+        target_angles[0] = 0
+        target_angles[3] = 0
+        target_angles[6] = 0
+        target_angles[9] = 0
 
         current_angles = self.data.qpos[7:19]
         current_vel    = self.data.qvel[6:18]
@@ -276,13 +288,12 @@ class Go2EnvMoonFly(gym.Env):
         # 4. 返回
         # ----------------------------------------------------
         obs = self.get_observations()
-        reward, r_escape_plane, r_escape_height, r_pose, r_jet, r_soft = self._get_reward(obs)
+        reward, r_escape, r_pose, r_jet, r_soft = self._get_reward(obs)
         terminated, reason = self._check_done(obs)
         truncated = False  # 你暂时还没有时间截断机制
 
         info = {"termination_reason": reason,
-                "r_escape_plane": r_escape_plane,
-                "r_escape_height": r_escape_height,
+                "r_escape": r_escape,
                 "r_pose": r_pose,
                 "r_jet": r_jet,
                 "r_soft": r_soft}
@@ -372,8 +383,8 @@ class Go2EnvMoonFly(gym.Env):
     
     def _get_reward(self,obs):
         done,info = self._check_done(obs)
-        reward, r_escape_plane, r_escape_height, r_pose, r_jet, r_soft = compute_reward_fly(self.data, done, info, self.crater_config)
-        return reward, r_escape_plane, r_escape_height, r_pose, r_jet, r_soft
+        reward, r_escape, r_pose, r_jet, r_soft = compute_reward_fly(self.data, done, info, self.crater_config)
+        return reward, r_escape, r_pose, r_jet, r_soft
 
     def _check_done(self, obs):
         qw, qx, qy, qz = self.data.qpos[3:7]

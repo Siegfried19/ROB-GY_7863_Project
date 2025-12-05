@@ -127,23 +127,37 @@ def compute_reward_fly(data, done, reason, crater_config):
     crater_height = crater_config["depth"]
 
     dist_xy = np.sqrt(x*x + y*y)
-    escaped = dist_xy > crater_radius_extra
-
+    escaped = dist_xy > crater_radius
+    
+    target_xy = np.asarray([crater_radius, 0.0])
+    target_dir = target_xy / np.linalg.norm(target_xy) 
+    pos_xy = np.asarray([x, y])
+    
+    progress_dist = np.dot(pos_xy, target_dir)
+    vertical_vec = pos_xy - progress_dist * target_dir
+    deviation_dist = np.linalg.norm(vertical_vec)
+    
+    normalized_progress = progress_dist / crater_radius_extra
+    normalized_deviation = deviation_dist / crater_radius_extra
+    
     # Escape reward
-    radial_speed = (x*vx + y*vy) / (crater_radius + 1e-6)
-    r_escape_plane = 8.0 * radial_speed
-    
-    r_escape_height = (dist_xy/crater_radius) * np.sqrt((z - crater_height)**2)
-    
+    if not escaped:
+        r_escape_xy = normalized_progress * 2.0 - normalized_deviation * 1.0
+        r_escape_z = (z - crater_height) * (1 - normalized_progress)
+    else:
+        r_escape_xy = 2.0
+        r_escape_z = (z - crater_height) * (1 - normalized_progress)
+            
+    r_escape = r_escape_xy + r_escape_z
 
     # Pose stability
     qw, qx, qy, qz = data.qpos[3:7]
     roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz')
-    r_pose = -1.0 * abs(pitch) - 0.5 * abs(roll)
+    r_pose = -4.0 * abs(pitch) - 2.0 * abs(roll)
 
     # et energy penalty
     jet = data.ctrl[12:16]
-    r_jet = -0.05 * np.sum(jet * jet)
+    r_jet = -0.0006 * np.sum(jet)
 
     # ------------------------
     # D) Soft landing reward (only after escape)
@@ -167,7 +181,7 @@ def compute_reward_fly(data, done, reason, crater_config):
     # ------------------------
     r_alive = 0.001
 
-    reward = r_escape_plane + r_escape_height + r_pose + r_jet + r_soft + r_alive + escaped*100.0
+    reward = r_escape + r_pose + r_jet + r_soft + r_alive + escaped*500.0
 
     # ------------------------
     # F) terminal bonus
@@ -178,7 +192,7 @@ def compute_reward_fly(data, done, reason, crater_config):
         else:
             reward -= 50
 
-    return reward, r_escape_plane, r_escape_height, r_pose, r_jet, r_soft
+    return reward, r_escape, r_pose, r_jet, r_soft
 
 def compute_reward_fly2(data, done, reason):
     x, y, z = data.qpos[:3]

@@ -32,9 +32,9 @@ parser.add_argument('--xml_path', type=str, default="../unitree_go2/scene_moon_j
 args = parser.parse_args()
 
 PARAM_RANGES = {
-    "foot_slide": (0.03, 0.2),
-    "foot_spin": (0.001, 0.02),
-    "foot_roll": (0.001, 0.02),
+    "foot_slide": (0.1, 0.5),
+    "foot_spin": (0.005, 0.02),
+    "foot_roll": (0.0005, 0.02),
     "crater_size": (0.4, 0.7),
     "crater_depth": (0.5, 2),
     "flat_ratio": (0.2, 0.4),
