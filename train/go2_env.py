@@ -384,6 +384,9 @@ class Go2EnvMoonFly(gym.Env):
 
         if z > 10:
             return True, "too_high"
+        
+        if x < 0.5:
+            return True, "too_backward"
 
         if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():
             return True, "nan_error"

@@ -6,7 +6,7 @@ import register_envs
 # or: from go2_env import Go2EnvMoonFly
 
 # 加载模型（zip 文件）
-model = PPO.load("./output/sb3_fly/sb3_fly_2000000_steps.zip", device="cpu")
+model = PPO.load("./output/sb3_fly/sb3_fly_1000000_steps.zip", device="cpu")
 
 # 创建环境
 env = gym.make("Go2FlyingingGround-v0")
@@ -34,7 +34,7 @@ for step in range(200000):
     
     if terminated:
         print(info.get("termination_reason"), reward)
-        print(f"Acu reward: {acu_reward:.2f}, escape: {acu_r_cross:.2f}, pose: {acu_r_pose:.2f}, jet: {acu_r_jet:.2f}, soft: {acu_r_soft:.2f}")
+        print(f"Acu reward: {acu_reward:.2f}, cross: {acu_r_cross:.2f}, pose: {acu_r_pose:.2f}, jet: {acu_r_jet:.2f}, soft: {acu_r_soft:.2f}")
     time.sleep(0.01)
     # 渲染（你可以用自己的）
     env.render()

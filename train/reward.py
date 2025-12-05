@@ -124,15 +124,15 @@ def compute_reward_fly(data, done, reason, vally_width):
     vx, vy, vz = data.qvel[:3]
     cross = x > (2 + vally_width)
 
-    if cross is False:
-        r_cross = x
+    if cross == False:
+        r_cross = (x - 1.5)*2.0
     else:
         r_cross = 0
-
+        
     # Pose stability
     qw, qx, qy, qz = data.qpos[3:7]
     roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz')
-    r_pose = -4.0 * abs(pitch) - 2.0 * abs(roll)
+    r_pose = -1.0 * abs(pitch) - 0.5 * abs(roll)
 
     # et energy penalty
     jet = data.ctrl[12:16]
