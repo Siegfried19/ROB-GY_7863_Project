@@ -74,7 +74,7 @@ def main():
         # foot_fric_vector = [f_slide, f_spin, f_roll]
         foot_fric_vector = [0.8, 0.02, 0.01]
         
-        body_fric_scalar = f_slide * 0.5
+        body_fric_scalar = 0.4
         
         # v_width = np.random.uniform(*PARAM_RANGES["vally_width"])
         v_width = 3.0
