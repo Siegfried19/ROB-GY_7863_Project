@@ -127,9 +127,13 @@ def compute_reward_fly(data, done, reason, vally_width, max_torque, jet_max, ini
     high_enough = z_normalized > 3.0
 
     # Let it jump high
-    r_high = 2.0 * np.exp(- 2.0 * (z_normalized - 3.0)**2)
-    # r_pos = -0.5 * (x - 1.5)**2 - 0.5 * y**2
-    r_pos = 0.0
+    r_high = 4.0 * np.exp(- 0.3 * (z_normalized - 3.0)**2)
+    clamped_x = np.clip(x, 0.8, 2.2)
+    clamped_y = np.clip(y, -0.7, 0.7)
+    error_x = clamped_x - x
+    error_y = clamped_y - y
+    r_pos = -0.1 * np.exp(- 1.0 * (error_x)**2) - 0.1 * np.exp(- 1.0 * (error_y)**2)
+    # r_pos = 0.0
     
     r_cross = r_high + r_pos
     # if cross == False:
@@ -151,7 +155,7 @@ def compute_reward_fly(data, done, reason, vally_width, max_torque, jet_max, ini
     error_roll = clamped_roll - lower_bound
     
     if z_normalized > 1.0:
-        r_pose =  (np.exp(-0.5 * (roll ** 2)) + np.exp(-0.5 * (pitch ** 2)))
+        r_pose =  - 0.2 * (np.exp(-0.5 * (roll ** 2)) - 0.2 * np.exp(-0.5 * (pitch ** 2))) - 0.1 * (np.exp(-0.5 * (yaw ** 2)))
     else:
         r_pose = 0
 
@@ -162,7 +166,7 @@ def compute_reward_fly(data, done, reason, vally_width, max_torque, jet_max, ini
     motor_norm = motor / abs(max_torque)
     jet_norm = jet / abs(jet_max)
     
-    r_jet = -0.05 * np.sum(jet_norm**2)
+    r_jet = -0.01 * np.exp(-0.1 * np.sum(jet_norm**2))
     
     # Action smoothness penalty (optional)
     action_diff = action - last_action
@@ -183,8 +187,8 @@ def compute_reward_fly(data, done, reason, vally_width, max_torque, jet_max, ini
                                    - np.sum((FR_thrust - RR_thrust)**2) 
                                    - np.sum((RL_thrust - RR_thrust)**2))
     
-    # r_smooth = 0.05 * np.exp(-np.sum(action_diff**2)) + action_RL_diff
-    r_smooth = 0.0
+    r_smooth = 0.16 * np.exp(-np.sum(action_diff**2))
+    # r_smooth = 0.0
     # ------------------------
     # D) Soft landing reward (only after escape)
     # ------------------------
@@ -221,7 +225,7 @@ def compute_reward_fly(data, done, reason, vally_width, max_torque, jet_max, ini
         if reason == "take_off_success":
             reward += 500
         else:
-            reward -= 50
+            reward -= 100
 
     return reward, r_cross, r_pose, r_jet, r_soft
 

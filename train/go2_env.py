@@ -201,6 +201,7 @@ class Go2EnvMoonFly(gym.Env):
         init_joint_angles = np.array([0, 0.9, -1.57] * 4, dtype=np.float32)
         self.data.qpos[7:19] = init_joint_angles
         self.data.qpos[7:19] += np.random.uniform(-0.05, 0.05, 12)
+        self.time = 0.0
         
         # Simulate a few steps to settle down
         settle_steps = 100
@@ -292,6 +293,7 @@ class Go2EnvMoonFly(gym.Env):
         # 4. 返回
         # ----------------------------------------------------
         obs = self.get_observations()
+        self.time = self.time + self.model.opt.timestep
         reward, r_cross, r_pose, r_jet, r_soft = self._get_reward(obs, action)
         terminated, reason = self._check_done(obs, self.valley_width)
         truncated = False  # 你暂时还没有时间截断机制
@@ -386,7 +388,7 @@ class Go2EnvMoonFly(gym.Env):
         if cross and z < 3.4 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
             return True, "success_landing"
 
-        if abs(roll) > 0.7 or abs(pitch) > 0.9:
+        if abs(roll) > 0.7 or abs(pitch) > 0.9 or abs(yaw) > 1.1:
            return True, "unstable_orientation"
        
         if z < 2:
@@ -400,6 +402,9 @@ class Go2EnvMoonFly(gym.Env):
 
         if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():
             return True, "nan_error"
+        
+        if self.time > 10.0:
+            return True, "time_out"
 
         return False, None
 
