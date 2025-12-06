@@ -107,7 +107,7 @@ def main():
         learning_rate=3e-4,
         gamma=0.99,
         gae_lambda=0.95,
-        ent_coef=0.01,
+        ent_coef=0.02,
         tensorboard_log = args.save_path+"/logs",
     )
 

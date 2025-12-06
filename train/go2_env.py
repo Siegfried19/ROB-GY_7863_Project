@@ -177,6 +177,14 @@ class Go2EnvMoonFly(gym.Env):
         self.viewer = None
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.num_actions,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
+        
+        # 获得环境定义的最大量
+        self.max_torque = self.model.actuator_ctrlrange[:12, 1]
+        self.jet_max = self.model.actuator_ctrlrange[12:, 1]
+        
+        # 动作平滑
+        self.last_action = np.zeros(self.num_actions, dtype=np.float32)
+        
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
@@ -209,8 +217,7 @@ class Go2EnvMoonFly(gym.Env):
             torque = kp * (init_joint_angles - current_angles) - kd * current_vel
             
             # 限制力矩
-            max_torque = self.model.actuator_ctrlrange[:12, 1]
-            torque = np.clip(torque, -max_torque, max_torque)
+            torque = np.clip(torque, -self.max_torque, self.max_torque)
             
             # 写入控制 (注意：Jet 推力设为 0)
             self.data.ctrl[:12] = torque
@@ -219,6 +226,8 @@ class Go2EnvMoonFly(gym.Env):
             mujoco.mj_step(self.model, self.data)
     
         self.data.qvel[:6] = 0.0
+        self.last_action = np.zeros(self.num_actions, dtype=np.float32)
+        self.init_z = self.data.qpos[2]
         obs = self.get_observations()
         info = {}
 
@@ -230,8 +239,8 @@ class Go2EnvMoonFly(gym.Env):
         # ----------------------------------------------------
         # 1. 关节角控制（前12维） angles → torque via PD
         # ----------------------------------------------------
-        joint_low  = self.model.jnt_range[:12, 0]
-        joint_high = self.model.jnt_range[:12, 1]
+        joint_low  = self.model.jnt_range[1:13, 0]
+        joint_high = self.model.jnt_range[1:13, 1]
 
         # 把 [-1,1] action 转成实际角度
         target_angles = joint_low + (action[:12] + 1) * 0.5 * (joint_high - joint_low)
@@ -253,22 +262,20 @@ class Go2EnvMoonFly(gym.Env):
 
         kp = 40.0
         kd = 3.0
+        # print("Knee target:", target_angles[2], target_angles[5], target_angles[8], target_angles[11])
 
         joint_torque = kp * (target_angles - current_angles) - kd * current_vel
 
         # 限制在 actuator torque 范围内
-        joint_max = self.model.actuator_ctrlrange[:12, 1]
-        joint_torque = np.clip(joint_torque, -joint_max, joint_max)
-
+        joint_torque = np.clip(joint_torque, -self.max_torque, self.max_torque)
 
         # ----------------------------------------------------
         # 2. 火箭推力控制（后 4 维）
         # ----------------------------------------------------
         jet_action = action[12:]
-        jet_max = self.model.actuator_ctrlrange[12:, 1]
 
         jet_norm = (jet_action + 1) / 2.0    # [-1,1] → [0,1]
-        jet_force = jet_norm * jet_max
+        jet_force = jet_norm * self.jet_max
 
 
         # ----------------------------------------------------
@@ -285,7 +292,7 @@ class Go2EnvMoonFly(gym.Env):
         # 4. 返回
         # ----------------------------------------------------
         obs = self.get_observations()
-        reward, r_cross, r_pose, r_jet, r_soft = self._get_reward(obs)
+        reward, r_cross, r_pose, r_jet, r_soft = self._get_reward(obs, action)
         terminated, reason = self._check_done(obs, self.valley_width)
         truncated = False  # 你暂时还没有时间截断机制
 
@@ -358,9 +365,9 @@ class Go2EnvMoonFly(gym.Env):
             new_center_x = new_left_edge + half_len_x
             self.model.geom_pos[geom_id, 0] = new_center_x
             
-    def _get_reward(self,obs):
+    def _get_reward(self,obs, action):
         done,info = self._check_done(obs, self.valley_width)
-        reward, r_cross, r_pose, r_jet, r_soft = compute_reward_fly(self.data, done, info, self.valley_width)
+        reward, r_cross, r_pose, r_jet, r_soft = compute_reward_fly(self.data, done, info, self.valley_width, self.max_torque, self.jet_max, self.init_z, action,self.last_action)
         return reward, r_cross, r_pose, r_jet, r_soft
 
     def _check_done(self, obs, valley_width):

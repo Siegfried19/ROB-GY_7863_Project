@@ -119,15 +119,17 @@ def compute_reward_refence_fly(data, done, ref = LunarJumpRef(), rw= RewardJumpC
         reward -= 20.0
     return float(reward)
     
-def compute_reward_fly(data, done, reason, vally_width):
+def compute_reward_fly(data, done, reason, vally_width, max_torque, jet_max, init_z, action, last_action):
     x, y, z = data.qpos[:3]
+    z_normalized = z - init_z  # 归一化初始高度
     vx, vy, vz = data.qvel[:3]
     cross = x > (2 + vally_width)
-    high_enough = z > 7.0
+    high_enough = z_normalized > 3.0
 
     # Let it jump high
-    r_high = 2.0 * np.exp(- (z - 7.0)**2 / (2 * 2**2))
-    r_pos = -0.5 * (x - 1.5)**2 - 0.5 * y**2
+    r_high = 2.0 * np.exp(- 2.0 * (z_normalized - 3.0)**2)
+    # r_pos = -0.5 * (x - 1.5)**2 - 0.5 * y**2
+    r_pos = 0.0
     
     r_cross = r_high + r_pos
     # if cross == False:
@@ -136,15 +138,53 @@ def compute_reward_fly(data, done, reason, vally_width):
     #     r_cross = 0
         
     # Pose stability
+    lower_bound = np.deg2rad(20)
+    upper_bound = np.deg2rad(50)
+    
     qw, qx, qy, qz = data.qpos[3:7]
     roll, pitch, yaw = R.from_quat([qx, qy, qz, qw]).as_euler('xyz')
-    r_pose = -1.0 * abs(pitch) - 0.5 * abs(roll)
+    # r_pose = -1.0 * abs(pitch) - 1.0 * abs(roll)
+    
+    clamped_pitch = np.clip(pitch, lower_bound, upper_bound)
+    clamped_roll = np.clip(roll, lower_bound, upper_bound)
+    error_pitch = clamped_pitch - lower_bound
+    error_roll = clamped_roll - lower_bound
+    
+    if z_normalized > 1.0:
+        r_pose =  (np.exp(-0.5 * (roll ** 2)) + np.exp(-0.5 * (pitch ** 2)))
+    else:
+        r_pose = 0
 
     # et energy penalty
     motor = data.ctrl[0:12]
     jet = data.ctrl[12:16]
-    r_jet = -0.000001 * np.sum(jet**2) - 0.000001 * np.sum(motor**2)
-
+    
+    motor_norm = motor / abs(max_torque)
+    jet_norm = jet / abs(jet_max)
+    
+    r_jet = -0.05 * np.sum(jet_norm**2)
+    
+    # Action smoothness penalty (optional)
+    action_diff = action - last_action
+    
+    FL_action = action[:3]
+    FR_action = action[3:6]
+    RL_action = action[6:9]
+    RR_action = action[9:12]
+    
+    FL_thrust = data.ctrl[12]
+    FR_thrust = data.ctrl[13]
+    RL_thrust = data.ctrl[14]
+    RR_thrust = data.ctrl[15]
+    
+    action_RL_diff = 0.05 * np.exp(-np.sum((FL_action - RL_action)**2) 
+                                   - np.sum((FR_action - RR_action)**2) 
+                                   - np.sum((FL_thrust - RL_thrust)**2) 
+                                   - np.sum((FR_thrust - RR_thrust)**2) 
+                                   - np.sum((RL_thrust - RR_thrust)**2))
+    
+    # r_smooth = 0.05 * np.exp(-np.sum(action_diff**2)) + action_RL_diff
+    r_smooth = 0.0
     # ------------------------
     # D) Soft landing reward (only after escape)
     # ------------------------
@@ -155,7 +195,7 @@ def compute_reward_fly(data, done, reason, vally_width):
 
         # 2. height control
         target_h = 3.4
-        r_soft_h = -3.0 * abs(z - target_h)
+        r_soft_h = -3.0 * abs(z_normalized - target_h)
 
         # 3. landing stability
         r_soft_pose = -2.0 * (abs(roll) + abs(pitch))
@@ -165,13 +205,16 @@ def compute_reward_fly(data, done, reason, vally_width):
     # ------------------------
     # E) small alive reward
     # ------------------------
-    r_alive = 0.001
+    r_alive = -0.002
 
-    reward = r_cross + r_pose + r_jet + r_soft + r_alive + cross*10.0
+    reward = r_cross + r_pose + r_jet + r_soft + r_alive + r_smooth + cross*10.0
 
     # ------------------------
     # F) terminal bonus
     # ------------------------
+    if high_enough:
+        print("high enough!")
+
     if done:
         if reason == "success_landing":
             reward += 1500     # 高奖励，鼓励逃出+落地
