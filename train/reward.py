@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 @dataclass
 class LunarJumpCfg:
-    z0: float = 0.5          # 站立高度
+    z0: float = 3.5          # 站立高度
     g: float = 3.71          # 重力（你这里是火星）
     h_peak: float = 2.0      # 抬升高度（相对 z0）
     L: float = 3.0           # 水平跨越距离
@@ -87,7 +87,7 @@ class RewardJumpCfg:
     w_z: float = 2.0
     w_v: float = 3.0
     w_ori: float = 0.5
-    w_land: float = 30.0
+    w_land: float = 5.0
     lam_tau: float = 0.0
     sz: float = 0.5
     sv: float = 0.5
@@ -164,12 +164,18 @@ def compute_reward_refence_fly(data, done, is_land, ref = LunarJumpRef(), rw= Re
     # print("reward", rz,rv,rori)
     
     # 靠近地面时鼓励小竖直速度（软着陆）
-    near_ground =  x>ref.cfg.L/2 and (ref.cfg.z0 - 0.3) < z < (ref.cfg.z0 + 0.5)
-    if near_ground:
-        rland = np.exp(-abs(vz)) +np.exp(-(roll**2 + pitch**2)/ (rw.sori**2))
-        rv = np.exp(-((vx - vx_ref)**2 ) / (rw.sv**2))
+    if x>ref.cfg.L/2 :
+        z_high = ref.cfg.z0 + 1.0  # 上边界：高于它一定是“飞”，不算降落
+        z_low  = ref.cfg.z0 + 0.3   # 下边界：低于它一定是“落地阶段”
+
+        # 线性插值 + 截断到 [0,1]
+        height_factor = (z_high - z) / (z_high - z_low)
+        height_factor = np.clip(height_factor, 0.0, 1.0)
     else:
-        rland  = 0.0
+        height_factor = 0
+
+    rland = height_factor*(np.exp(-abs(vz)) +np.exp(-(roll**2 + pitch**2)/ (rw.sori**2)))
+  
     # 能耗惩罚
     tau = np.abs(np.array(data.actuator_force[12:], dtype=float)).sum()
     r_tau = -rw.lam_tau * tau
@@ -184,6 +190,7 @@ def compute_reward_refence_fly(data, done, is_land, ref = LunarJumpRef(), rw= Re
             print("landing!")
             reward += 10
         #reward -= 500
+ 
 
     return float(reward),reward_list
     

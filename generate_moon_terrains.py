@@ -70,6 +70,38 @@ def generate_crater_at_origin(
     print(f"Saved: {output_path} (radius={radius_m}m, depth={depth_m}m, size={size}×{size})")
 
 
+
+def generate_rect_trench(
+    x_start_m=0.25,           # 沟开始
+    x_end_m=1.25,             # 沟结束（宽 2m）
+    depth_m=3.0,             # 沟深度，向下为负
+    size=512,
+    world_size_m=10.0,
+    output_path="unitree_go2/assets/moon_trench_down.png"
+):
+    """
+    生成一条沿 y 方向延伸、地面高度为 0、沟槽高度为 -depth_m 的矩形沟槽。
+    PNG 里会线性缩放到 [0,255]，但真实高度语义保持不变。
+    """
+
+    # 网格
+    x = np.linspace(-world_size_m/2, world_size_m/2, size)
+    y = np.linspace(-world_size_m/2, world_size_m/2, size)
+    X, Y = np.meshgrid(x, y)
+
+    # 真实高度（MuJoCo 语义）
+    Z = np.zeros_like(X)                # 地面高度 = 0
+    Z[(X >= x_start_m) & (X <= x_end_m)] = -depth_m   # 沟槽 = -1m
+
+    # 将 [-depth_m, 0] 映射到 [0,255] 以存储 PNG
+    Z_img = (Z - Z.min()) / (Z.max() - Z.min() + 1e-8)  # 0 → 沟底, 1 → 地面
+    Z_img = (Z_img * 255).astype(np.uint8)
+
+    img = Image.fromarray(Z_img)
+    img.save(output_path)
+
+    print("Saved:", output_path)
+    print(f"Trench from x={x_start_m} to x={x_end_m}, depth={depth_m}m")
 # 示例使用：
 # 小而深的坑
 #generate_random_moon_png(crater_size=0.6, crater_depth=0.03)
@@ -79,9 +111,10 @@ def generate_crater_at_origin(
 
 
 #在原点位置
-generate_crater_at_origin(
-    radius_m=0.0,
-    depth_m=0.0,
-    size=512,
-    world_size_m=10.0
-)
+# generate_crater_at_origin(
+#     radius_m=2.0,
+#     depth_m=2.0,
+#     size=512,
+#     world_size_m=10.0
+# )
+generate_rect_trench()

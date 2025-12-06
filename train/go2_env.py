@@ -8,13 +8,14 @@ from scipy.spatial.transform import Rotation as R
 from get_ref_action import get_ref_torque
 
 
+
 class Go2EnvMoonWalk(gym.Env):
     def __init__(self, xml_path="../unitree_go2/scene_moon.xml"):
         super().__init__()
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.data = mujoco.MjData(self.model)
         self.num_actions = self.model.nu    # 动作数
-        self.num_obs = 36               # 可自由定义观测维度
+        self.num_obs = 44              # 可自由定义观测维度
         self.viewer = None
         self.num_envs = 16
         # 定义 action/observation 空间
@@ -110,7 +111,7 @@ class Go2EnvMoonFly(gym.Env):
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.data = mujoco.MjData(self.model)
         self.num_actions = self.model.nu    # 动作数
-        self.num_obs = 33              # 可自由定义观测维度
+        self.num_obs = 33             # 可自由定义观测维度
         self.viewer = None
   
         # 定义 action/observation 空间
@@ -118,6 +119,7 @@ class Go2EnvMoonFly(gym.Env):
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_obs,), dtype=np.float32)
         self.key_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_KEY, "init")
         self.is_land = False
+
     def reset(self, *, seed=None, options=None):
     # 必写
         super().reset(seed=seed)
@@ -141,7 +143,7 @@ class Go2EnvMoonFly(gym.Env):
         # ----------------------------------------------------
         joint_low  = self.model.jnt_range[:12, 0]
         joint_high = self.model.jnt_range[:12, 1]
-
+       
         # 把 [-1,1] action 转成实际角度
         target_angles = joint_low + (action[:12] + 1) * 0.5 * (joint_high - joint_low)
         abad_index = [0, 3, 6, 9]
@@ -169,7 +171,7 @@ class Go2EnvMoonFly(gym.Env):
         jet_max = self.model.actuator_ctrlrange[12:, 1]
         z = self.data.qpos[2]
 
-        # 例如超过 0.7m 之后禁止继续喷火
+        # 例如超过 1.0m 之后禁止继续喷火
         if z > 1.0:
             jet_max = jet_max*0.2     
 
@@ -207,6 +209,7 @@ class Go2EnvMoonFly(gym.Env):
                 "ori_rd":reward_each[2],
                 "tau_rd":reward_each[3],
                 "land_rd":reward_each[4]}
+
 
         return obs, rewards, terminated, truncated, info
 
@@ -287,17 +290,17 @@ class Go2EnvMoonFly(gym.Env):
         # if escaped and z < 0.5 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
         #     return True, "success_landing"
     
-        if 3.2> x > 2.8 and z < 0.4 and abs(roll) < 0.5 and abs(pitch) < 0.5 and abs(yaw) < 0.5 :
-           self.is_land = True
-           return True, "landing"
+        # if 3.2> x > 2.8 and z < 3.4 and abs(roll) < 0.5 and abs(pitch) < 0.5 and abs(yaw) < 0.5 :
+        #    self.is_land = True
+        #    return True, "landing"
     
-        if abs(roll) > 0.7 or abs(pitch) > 0.7 or abs(yaw) > 0.7:
-           return True, "unstable_orientation"
+        # if abs(roll) > 0.7 or abs(pitch) > 0.7 or abs(yaw) > 0.7:
+        #    return True, "unstable_orientation"
 
-        if x>3.5 or z > 4.0:
-            return True, "too_far"
+        # if x>3.5 or z > 7.0:
+        #     return True, "too_far"
         
-        if t> 2.5:
+        if t> 3.0:
             return True, "too_long"
         if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():
             return True, "nan_error"
@@ -307,4 +310,7 @@ class Go2EnvMoonFly(gym.Env):
     def render(self):
         if self.viewer is None:
             self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
+            # cam_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, "top_down")
+            # self.viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
+            # self.viewer.cam.fixedcamid = cam_id
         self.viewer.sync()

@@ -23,7 +23,7 @@
         <material name="moon_mat" texture="moon_tex" reflectance="0.2"/>
 
         <!-- 加载坑洼地形（你生成的 PNG） -->
-        <hfield name="moon_hf" file="moon_height.png" size="10 10 1.0 0.01"/>
+        <hfield name="moon_hf" file="moon_height_trench.png" size="10 10 3.0 0.01"/>
     </asset>
 
     <worldbody>
@@ -33,7 +33,7 @@
         <!-- 替换平面地面为坑洼地形 -->
         <geom name="moon_ground" type="hfield" hfield="moon_hf"
               material="moon_mat" rgba="0.7 0.7 0.7 1"/>
-
+        <camera name="top_down" pos="0 0 3" zaxis="0 0 -1"/>
 
     </worldbody>
 </mujoco>
