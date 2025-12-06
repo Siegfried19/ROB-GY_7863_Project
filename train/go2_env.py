@@ -175,8 +175,7 @@ class Go2EnvMoonFly(gym.Env):
         if z > 1.0:
             jet_max = jet_max*0.2     
 
-        if  self.is_land:
-            jet_max =0
+
         jet_norm = (jet_action + 1) / 2.0    # [-1,1] → [0,1]
         jet_force = jet_norm * jet_max
         # print("action",action)
