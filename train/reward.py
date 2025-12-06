@@ -123,11 +123,17 @@ def compute_reward_fly(data, done, reason, vally_width):
     x, y, z = data.qpos[:3]
     vx, vy, vz = data.qvel[:3]
     cross = x > (2 + vally_width)
+    high_enough = z > 7.0
 
-    if cross == False:
-        r_cross = (x - 1.5)*2.0
-    else:
-        r_cross = 0
+    # Let it jump high
+    r_high = 2.0 * np.exp(- (z - 7.0)**2 / (2 * 2**2))
+    r_pos = -0.5 * (x - 1.5)**2 - 0.5 * y**2
+    
+    r_cross = r_high + r_pos
+    # if cross == False:
+    #     r_cross = (x - 1.5)*2.0
+    # else:
+    #     r_cross = 0
         
     # Pose stability
     qw, qx, qy, qz = data.qpos[3:7]
@@ -135,8 +141,9 @@ def compute_reward_fly(data, done, reason, vally_width):
     r_pose = -1.0 * abs(pitch) - 0.5 * abs(roll)
 
     # et energy penalty
+    motor = data.ctrl[0:12]
     jet = data.ctrl[12:16]
-    r_jet = 0 * np.sum(jet)
+    r_jet = -0.000001 * np.sum(jet**2) - 0.000001 * np.sum(motor**2)
 
     # ------------------------
     # D) Soft landing reward (only after escape)
@@ -154,7 +161,7 @@ def compute_reward_fly(data, done, reason, vally_width):
         r_soft_pose = -2.0 * (abs(roll) + abs(pitch))
 
         r_soft = r_soft_v + r_soft_h + r_soft_pose
-
+    r_soft = 0.0
     # ------------------------
     # E) small alive reward
     # ------------------------
@@ -168,6 +175,8 @@ def compute_reward_fly(data, done, reason, vally_width):
     if done:
         if reason == "success_landing":
             reward += 1500     # 高奖励，鼓励逃出+落地
+        if reason == "take_off_success":
+            reward += 500
         else:
             reward -= 50
 

@@ -6,7 +6,7 @@ import register_envs
 # or: from go2_env import Go2EnvMoonFly
 
 # 加载模型（zip 文件）
-model = PPO.load("./output/sb3_fly/sb3_fly_100000000_steps.zip", device="cpu")
+model = PPO.load("./output/sb3_fly/sb3_fly_2000000_steps.zip", device="cpu")
 
 # 创建环境
 env = gym.make("Go2FlyingingGround-v0")

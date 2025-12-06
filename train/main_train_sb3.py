@@ -100,7 +100,7 @@ def main():
         policy="MlpPolicy",
         env=vec_env,
         verbose=1,
-        device="cuda",              # 使用 GPU
+        device="cpu",              # 使用 GPU
         n_steps=2048,               # 每次 rollout 步数（越大训练越稳定）
         batch_size=256,
         n_epochs=10,

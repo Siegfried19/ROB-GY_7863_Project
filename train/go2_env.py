@@ -187,7 +187,7 @@ class Go2EnvMoonFly(gym.Env):
         # Initial stable pose
         self.data.qpos[0] = 1.5
         self.data.qpos[1] = 0.0 
-        self.data.qpos[2] = 3.35
+        self.data.qpos[2] = 3.4
         self.data.qpos[3:7] = [1.0, 0.0, 0.0, 0.0]
         
         init_joint_angles = np.array([0, 0.9, -1.57] * 4, dtype=np.float32)
@@ -195,7 +195,7 @@ class Go2EnvMoonFly(gym.Env):
         self.data.qpos[7:19] += np.random.uniform(-0.05, 0.05, 12)
         
         # Simulate a few steps to settle down
-        settle_steps = 500
+        settle_steps = 100
         
         kp = 60.0
         kd = 3.0
@@ -237,22 +237,22 @@ class Go2EnvMoonFly(gym.Env):
         target_angles = joint_low + (action[:12] + 1) * 0.5 * (joint_high - joint_low)
         
         # 限制hip的角度
-        # hip_limit = 0.1745
-        # target_angles[0] = np.clip(target_angles[0], -hip_limit, hip_limit) # FL_hip
-        # target_angles[3] = np.clip(target_angles[3], -hip_limit, hip_limit) # FR_hip
-        # target_angles[6] = np.clip(target_angles[6], -hip_limit, hip_limit) # RL_hip
-        # target_angles[9] = np.clip(target_angles[9], -hip_limit, hip_limit) # RR_hip
+        hip_limit = 0.1745
+        target_angles[0] = -hip_limit + (action[0] + 1) * 0.5 * (2*hip_limit) # FL_hip
+        target_angles[3] = -hip_limit + (action[3] + 1) * 0.5 * (2*hip_limit) # FR_hip
+        target_angles[6] = -hip_limit + (action[6] + 1) * 0.5 * (2*hip_limit) # RL_hip
+        target_angles[9] = -hip_limit + (action[9] + 1) * 0.5 * (2*hip_limit) # RR_hip
         
-        target_angles[0] = 0
-        target_angles[3] = 0
-        target_angles[6] = 0
-        target_angles[9] = 0
+        # target_angles[0] = 0
+        # target_angles[3] = 0
+        # target_angles[6] = 0
+        # target_angles[9] = 0
 
         current_angles = self.data.qpos[7:19]
         current_vel    = self.data.qvel[6:18]
 
         kp = 40.0
-        kd = 0.6
+        kd = 3.0
 
         joint_torque = kp * (target_angles - current_angles) - kd * current_vel
 
@@ -276,6 +276,7 @@ class Go2EnvMoonFly(gym.Env):
         # ----------------------------------------------------
         self.data.ctrl[:12] = joint_torque
         self.data.ctrl[12:16] = jet_force
+        # 强制覆盖控制
 
         # 执行仿真
         mujoco.mj_step(self.model, self.data)
@@ -372,7 +373,9 @@ class Go2EnvMoonFly(gym.Env):
         vz = self.data.qvel[2]
         cross = x > (2.0 + valley_width)
    
-
+        if z > 6.5 and z < 7.5 and abs(roll)<0.5 and abs(pitch)<0.5:
+            return True, "take_off_success"
+        
         if cross and z < 3.4 and abs(vz) < 0.3 and abs(roll)<0.5 and abs(pitch)<0.5: # land termiate
             return True, "success_landing"
 
