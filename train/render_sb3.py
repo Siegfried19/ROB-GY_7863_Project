@@ -60,7 +60,7 @@ class TrajectoryLogger:
 model = PPO.load("./output/sb3_fly/can_track_good_landing_x_vara_vel/sb3_fly_7000000_steps.zip", device="cpu")
 # 创建环境
 
-env = gym.make("Go2FlyingingGround-v0")
+env = gym.make("Go2FlyingGround-v0")
 
 
 obs, info = env.reset()

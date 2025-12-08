@@ -1,29 +1,52 @@
 import numpy as np
 from PIL import Image
 
-def generate_random_moon_png(crater_size, crater_depth,  size=512, crater_count=5, seed=42):
- 
-    rng = np.random.default_rng(seed)
-    Z = np.zeros((size, size), dtype=np.float32)
-    X, Y = np.ogrid[:size, :size]
+def generate_rough_moon_terrain(
+    size=512,
+    world_size_m=10.0,
+    max_bump_height=0.10,      # 小坡高度（正向 +0.2m）
+    max_pit_depth=0.15,        # 坑深度 （向下 -0.25m，不再夸张）
+    smoothness=12,             # 越大越平滑，越小越崎岖(推荐8~18)
+    output_path="unitree_go2/assets/moon_height_rough.png"
+):
+    """
+    生成不平坦月壤地形 ---- 带噪声起伏、浅坑而非垂直深沟。
+    真实高度保存在 Z（单位 meter），映射为 PNG 用于地形加载。
+    """
 
-    for _ in range(crater_count):
-        cx, cy = rng.integers(0, size, 2)
-        # ✅ 坑的半径由 crater_size 控制
-        r = int(rng.integers(size * crater_size / 4, size * crater_size))
-        crater = np.exp(-((X - cx)**2 + (Y - cy)**2) / (2 * (r / 8)**2))
-        # ✅ 坑的深度由 crater_depth 控制
-        Z -= crater * crater_depth
+    # 网格坐标
+    x = np.linspace(-world_size_m/2, world_size_m/2, size)
+    y = np.linspace(-world_size_m/2, world_size_m/2, size)
+    X, Y = np.meshgrid(x, y)
 
-    # 归一化到 [0,1]
-    Z -= Z.min()
-    Z /= (Z.max() + 1e-8)
+    # ============================
+    # 基础随机山丘噪声 Perlin/Fractional Brownian Motion 风格
+    # ============================
+    Z = np.zeros((size, size))
 
-    # 转成灰度图
-    img = Image.fromarray((Z * 255).astype(np.uint8))
-    img.save("unitree_go2/assets/moon_height.png")
-    print(f"Saved moon_height.png, shape={Z.shape}, "
-          f"crater_size={crater_size}, crater_depth={crater_depth}")
+    for i in range(5):                                    # 多频率叠加（FBM风格山丘）
+        freq = (i+1) * 0.05 * smoothness
+        amp  = (max_bump_height - max_pit_depth) * (0.5**i)
+
+        Z += amp * (
+            np.sin(freq * X) * np.cos(freq * Y) +
+            0.5*np.sin(freq*0.8*X+1)*np.sin(freq*0.5*Y-1)
+        )
+
+    # ============================
+    # 控制高度范围：坑更浅、整体可控
+    # ============================
+    Z = np.clip(Z, -max_pit_depth, max_bump_height)
+
+    # 映射到 PNG 灰度 [0,255]
+    Z_img = (Z - Z.min()) / (Z.max() - Z.min() + 1e-8)
+    Z_img = (Z_img * 255).astype(np.uint8)
+
+    img = Image.fromarray(Z_img)
+    img.save(output_path)
+
+    print("Saved:", output_path)
+    print(f"Terrain Height Range: {Z.min():.3f}m ~ {Z.max():.3f}m")
 
 
 
@@ -117,4 +140,5 @@ def generate_rect_trench(
 #     size=512,
 #     world_size_m=10.0
 # )
-generate_rect_trench()
+#generate_rect_trench()
+generate_rough_moon_terrain()

@@ -1,5 +1,4 @@
 import torch
-import gym
 import numpy as np
 from model import Actor
 import time
@@ -8,18 +7,26 @@ from scipy.spatial.transform import Rotation as R
 import pandas as pd
 from get_ref_action import get_ref_torque
 import mujoco
-env = gym.make("Go2FlyingingGround-v0")
+import  gym
+from gym.envs.registration import register
+register(
+    id="Go2WalkingGround-v0",
+    entry_point="go2_env:Go2EnvMoonWalk",  
+)
 
-env.model.opt.timestep = 0.005 
+env = gym.make("Go2WalkingGround-v0")
+
+
 obs_dim = env.observation_space.shape[0]
 act_dim = env.action_space.shape[0]
 
-# policy = Actor(obs_dim, act_dim)
-# policy.load_state_dict(torch.load("output/checkpoints_moon_walking_deephole/actor_max.pth", map_location="cpu"))
-# policy.eval()
+policy = Actor(obs_dim, act_dim)
+policy.load_state_dict(torch.load("output/checkpoints_moon_walking_deephole/actor_max.pth", map_location="cpu"))
+policy.eval()
 
 
 obs= env.reset()
+
 done = False
 records = []
 refernces = []
@@ -29,15 +36,15 @@ refernces = []
 
 for step in range(100000):   # 运行2000步
     obs_tensor = torch.tensor(obs, dtype=torch.float32)
-    #with torch.no_grad():
-    #    action = policy.choose_action(obs_tensor)
+    with torch.no_grad():
+       action = policy.choose_action(obs_tensor)
     #action = env.action_space.sample()
-    action = np.zeros(env.action_space.shape, dtype=np.float32)
+    #action = np.zeros(env.action_space.shape, dtype=np.float32)
     obs, reward, done, info = env.step(action)
     
    
     env.my_render()  
-  
+   
     if done:
         obs = env.reset()
 

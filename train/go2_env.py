@@ -1,5 +1,8 @@
 import gymnasium as gym
 from gymnasium import spaces
+# import  gym
+# from gym import spaces
+
 import mujoco
 import numpy as np
 import mujoco.viewer
@@ -15,7 +18,7 @@ class Go2EnvMoonWalk(gym.Env):
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.data = mujoco.MjData(self.model)
         self.num_actions = self.model.nu    # 动作数
-        self.num_obs = 44              # 可自由定义观测维度
+        self.num_obs = 36             # 可自由定义观测维度
         self.viewer = None
         self.num_envs = 16
         # 定义 action/observation 空间
@@ -35,7 +38,7 @@ class Go2EnvMoonWalk(gym.Env):
         obs = self.get_observations()
         info = {}
 
-        return obs, info
+        return obs
 
     
     def step(self, action):
@@ -98,7 +101,7 @@ class Go2EnvMoonWalk(gym.Env):
 
         return False, None
 
-    def render(self):
+    def my_render(self):
         if self.viewer is None:
             self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
         self.viewer.sync()
