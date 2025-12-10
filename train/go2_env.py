@@ -297,6 +297,7 @@ class Go2EnvMoonFly(gym.Env):
         reward, r_cross, r_pose, r_jet, r_soft = self._get_reward(obs, action)
         terminated, reason = self._check_done(obs, self.valley_width)
         truncated = False  # 你暂时还没有时间截断机制
+        self.last_action = action
 
         info = {"termination_reason": reason,
                 "r_cross": r_cross,
